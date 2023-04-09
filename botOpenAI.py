@@ -1,6 +1,6 @@
 import telebot
 import openai
-
+#Служба підтримки
 user_ids = ['988653828', '717995343', '628446966']
 # Отримання API ключів для Telegram та OpenAI
 TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
