@@ -1,6 +1,7 @@
 import telebot
 import openai
 
+user_ids = ['988653828', '717995343', '628446966']
 # Отримання API ключів для Telegram та OpenAI
 TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
 OPENAI_API_KEY = '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'
@@ -29,10 +30,17 @@ def handle_start_command(message):
     # Відправлення привітального повідомлення користувачу
     send_text_reply(message.chat.id, "Привіт! Я бот, який може відповідати на твої запитання. Що б ти хотів(-ла) знати?\nХочеш зі мною поспілкуватися напиши мені @fiz_matbot.")
 
-@bot.message_handler(commands=['ivan'])
-def handle_ivan(message):
-    # Відправлення повідомлення
-    send_text_reply(message.chat.id, "@darkness_undead_ronin")
+# Обробка команди /support
+@bot.message_handler(commands=['support'])
+def handle_support_command(message):
+    # Відправка автоматичного повідомлення користувачу
+    bot.send_message(message.chat.id, 'Детальніше опишіть проблему і з вами зв\'яжеться служба підтримки.')
+
+# Обробка вхідних повідомлень
+@bot.message_handler(func=lambda message: True)
+def handle_messages(message):
+    # Відправка повідомлення власнику бота
+    bot.send_message(user_ids, f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: {message.chat.username}\nТекст: {message.text}')
 
 @bot.message_handler(commands=['yura'])
 def handle_yura(message):
@@ -65,7 +73,6 @@ def handle_yura(message):
 def handle_ban(message):
     # Відправлення повідомлення "без бану"
     send_text_reply(message.chat.id, "Іван не гей")
-
 
 
 # Обробник подій від бота Telegram
