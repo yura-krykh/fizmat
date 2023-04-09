@@ -1,7 +1,9 @@
 import telebot
 import openai
+
 #Служба підтримки
 user_ids = ['988653828', '717995343', '628446966']
+
 # Отримання API ключів для Telegram та OpenAI
 TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
 OPENAI_API_KEY = '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'
@@ -40,7 +42,9 @@ def handle_support_command(message):
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
     # Відправка повідомлення власнику бота
-    bot.send_message(user_ids, f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: {message.chat.username}\nТекст: {message.text}')
+    bot.send_message(988653828, f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: {message.chat.username}\nТекст: {message.text}')
+    bot.send_message(717995343, f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: {message.chat.username}\nТекст: {message.text}')
+    bot.send_message(628446966, f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: {message.chat.username}\nТекст: {message.text}')
 
 @bot.message_handler(commands=['yura'])
 def handle_yura(message):
@@ -94,3 +98,4 @@ def handle_message(message):
 # Запуск бота
 
 bot.polling(none_stop=True)
+
