@@ -14,18 +14,21 @@ bot = telebot.TeleBot(TELEGRAM_API_KEY)
 def send_text_reply(chat_id, reply):
     bot.send_message(chat_id, reply)
 
-# Функція для взаємодії з OpenAI API та отримання відповіді на запитання
-def get_openai_reply(question):
-    openai.api_key = OPENAI_API_KEY
+# Встановлення API ключа OpenAI
+openai.api_key = OPENAI_API_KEY
 
+@bot.message_handler(func=lambda message: True, content_types=['text'])
+def handle_text_message(message):
+    user_message = message.text
     # Виклик OpenAI API для отримання відповіді на запитання
     response = openai.Completion.create(
         model="text-davinci-003",
-        prompt=question,
+        prompt=user_message,
         max_tokens=1500
     )
     reply = response.choices[0].text.strip()
-    return reply
+    # Відправлення відповіді користувачу
+    bot.send_message(message.chat.id, reply)
 # Функція для обробки команди "/start"
 @bot.message_handler(commands=['start'])
 def message_handler_start(message):
@@ -34,18 +37,38 @@ def message_handler_start(message):
     item1 = types.KeyboardButton('Випадкове число 🎲')
     item2 = types.KeyboardButton('Розклад пар')
     item3 = types.KeyboardButton('Контакти викладачів')
-    item4 = types.KeyboardButton('Випадкове число2 🎲')
-    markup.add(item1, item2)
+    item4 = types.KeyboardButton('Аудиторії')
+    item5 = types.KeyboardButton('Інформація про розробників')
+    markup.add(item1, item2,item3, item4, item5)
     bot.send_message(message.chat.id, "Привіт\n{0.first_name}!\nЯ бот, який може відповідати на твої запитання. Що б ти хотів(-ла) знати?\nХочеш зі мною поспілкуватися напиши мені @fiz_matbot.".format(message.from_user), reply_markup=markup)
 
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
         if message.text == 'Випадкове число 🎲':
-            bot.send.message(message.chat.id, 'Ваше число:' + str(random.randint(0,1000)))
-    elif message.text == 'Випадкове число2 🎲':
+            bot.send_message(message.chat.id, 'Ваше число:' + str(random.randint(0,1000)))
 
+        elif message.text == 'Розклад пар':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            Monday = types.KeyboardButton('Понеділок')
+            Tuesday = types.KeyboardButton('Вівторок')
+            Wednesday = types.KeyboardButton('Середа')
+            Thursday = types.KeyboardButton('Четвер')
+            Friday = types.KeyboardButton('П\'ятниця')
+            back = types.KeyboardButton('🔙Назад')
 
+            markup.add(Monday, Tuesday, Wednesday, Thursday, Friday, back)
+
+            bot.send_message(message.chat.id, 'Розклад пар:\nОберіть нище день який вам треба👇', reply_markup = markup)
+        elif message.text == '🔙Назад':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item1 = types.KeyboardButton('Випадкове число 🎲')
+            item2 = types.KeyboardButton('Розклад пар')
+            item3 = types.KeyboardButton('Контакти викладачів')
+            item4 = types.KeyboardButton('Аудиторії')
+            item5 = types.KeyboardButton('Інформація про розробників')
+            markup.add(item1, item2, item3, item4, item5)
+            bot.send_message(message.chat.id,"Привіт\n{0.first_name}!\nЯ бот, який може відповідати на твої запитання. Що б ти хотів(-ла) знати?\nХочеш зі мною поспілкуватися напиши мені @fiz_matbot.".format(message.from_user), reply_markup=markup)
 # Обробка команди /support
 @bot.message_handler(commands=['support'])
 def _support_(message):
@@ -57,31 +80,6 @@ def _support_(message):
 def _yura(message):
     # Відправлення повідомлення
     send_text_reply(message.chat.id, "Найсексуальніший чоловік на цій планеті")
-@bot.message_handler(commands=['stepan'])
-def _stepan(message):
-    # Відправлення повідомлення
-    send_text_reply(message.chat.id, "@mamyn_synok")
-@bot.message_handler(commands=['shyrik'])
-def _shyrik(message):
-    # Відправлення повідомлення
-    send_text_reply(message.chat.id, "Мельник Олександр Сергійович(ми всі тебе любимо і поважаємо❤️)")
-@bot.message_handler(commands=['panda'])
-def panda(message):
-    # Відправлення повідомлення
-    send_text_reply(message.chat.id, "Громяк Мирон Іванович\nКандидат фізико-математичних наук, доцент,\nдекан фізико-математичного факультету\nНародився 10 вересня 1960 року в селі Геленки Козівського району Тернопільської області.\nКоло наукових інтересів: математичний аналіз.\nВикладає дисципліни: математичний аналіз.")
-@bot.message_handler(commands=['all'])
-def all(message):
-    # Відправлення повідомлення
-    send_text_reply(message.chat.id, "@yura_krykh , @bodian001 , @KolyaTymchak , @mamyn_synok , @darkness_undead_ronin")
-
-
-@bot.message_handler(commands=['help'])
-def help(message):
-    # Відправлення повідомлення
-    send_text_reply(message.chat.id, "Поки що, доступні лише такі команди для виклику учасників\n/ivan\n/bodia\n/stepan\n/kolya\n/yura\n/help\nВ скорому часі будуть ще додані цікаві функції.\nЗалишайтеся з нами🥺❤️")
-
-
-
 
 # Обробник подій від бота Telegram
 
