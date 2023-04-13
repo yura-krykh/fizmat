@@ -10,14 +10,49 @@ TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
 OPENAI_API_KEY = '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'
 
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
-@bot.message_handler(commands = ['start'])
+
+def get_user_data(user_id):
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute(f"SELECT grypa, email, first_last FROM login_id WHERE id = {user_id}")
+    data = cursor.fetchone()
+    connect.close()
+    return data
+
+
+# Функція оновлення ім'я та прізвище користувача в базі даних
+
+
+# Функція, що відправляє профіль користувача
+def send_profile(message):
+    user_id = message.chat.id
+    user_data = get_user_data(user_id)
+    if user_data is not None:
+        grypa, email, first_last = user_data
+        profile_info = f"Група:    {grypa}\nEmail:    {email}\nПрізвище та ім'я:    {first_last}"
+        bot.send_message(message.chat.id, profile_info)
+        # Додати кнопку редагування профілю
+    else:
+        bot.send_message(message.chat.id, "Вас не знайдено(\nЗвернись до /support!")
+
+
+
+
+
+
+
+
+@bot.message_handler(commands=['start'])
 def start(message: types.Message):
     connect = sqlite3.connect('users.db')
     cursor = connect.cursor()
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS login_id(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL)""")
+        username TEXT NOT NULL,
+        email TEXT NOT NULL,
+        grypa TEXT NOT NULL,
+        first_last TEXT NOT NULL)""")
 
     connect.commit()
     people_id = message.chat.id
@@ -27,22 +62,63 @@ def start(message: types.Message):
         user_name = message.chat.username
         user_id = message.chat.id
 
+        # Запит email
+        bot.send_message(message.chat.id, "Будь ласка, введіть свою email адресу:")
+        bot.register_next_step_handler(message, get_email)
 
-        cursor.execute("INSERT INTO login_id (id, username) VALUES(?,?);", (user_id,user_name))
-        connect.commit()
     else:
         bot.send_message(message.chat.id, "Ти вже зареєстрований!")
+
+
+def get_email(message: types.Message):
+    email = message.text
+
+    # Перевірка чи введений email закінчується на "@fizmat.tnpu.edu.ua"
+    if email.endswith("@fizmat.tnpu.edu.ua"):
+        # Запит групи
+        bot.send_message(message.chat.id, "Будь ласка, введіть свою групу:")
+        bot.register_next_step_handler(message, get_group, email)
+    else:
+        # Надсилання повідомлення про неправильний формат email
+        bot.send_message(message.chat.id, "Введена email адреса не є фізматівською. Будь ласка, введіть правильну email адресу, закінчуєму на '@fizmat.tnpu.edu.ua'.")
+        # Повернення до функції get_email для очікування наступного вводу від користувача
+        bot.register_next_step_handler(message, get_email)
+
+
+def get_group(message: types.Message, email):
+    group = message.text
+
+    # Запит імені та прізвища
+    bot.send_message(message.chat.id, "Будь ласка, введіть своє ім'я та прізвище:")
+    bot.register_next_step_handler(message, get_first_last, email, group)
+
+
+def get_first_last(message: types.Message, email, group):
+    first_last = message.text
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+
+    user_id = message.chat.id
+    user_name = message.chat.username
+
+    # Вставка даних в базу даних
+    cursor.execute("INSERT INTO login_id (id, username, email, grypa, first_last) VALUES(?, ?, ?, ?, ?);",
+                   (user_id, user_name, email, group, first_last))
+    connect.commit()
+
+    bot.send_message(message.chat.id, f"Ти, {message.chat.username} успішно зареєстрований(-на)!")
+
 @bot.message_handler(commands=['functions'])
 def message_handler_start(message):
     # Відправлення привітального повідомлення користувачу з використанням функції format()
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    item1 = types.KeyboardButton('Випадкове число 🎲')
-    item2 = types.KeyboardButton('Розклад пар')
+    item1 = types.KeyboardButton('📜Профіль')
+    item2 = types.KeyboardButton('✍️Розклад пар')
     item3 = types.KeyboardButton('Контакти викладачів')
     item4 = types.KeyboardButton('Аудиторії')
     item5 = types.KeyboardButton('Інформація про розробників')
     markup.add(item1, item2,item3, item4, item5)
-    bot.send_message(message.chat.id, "ОК".format(message.from_user), reply_markup=markup)
+    bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
 @bot.message_handler(commands=['support'])
 def message_handler_support(message):    # Відправка автоматичного повідомлення користувачу
@@ -59,7 +135,7 @@ def bot_message(message):
     if message.chat.type == 'private':
         if message.text == 'Інформація про розробників':
             bot.send_message(message.chat.id, 'Засновник @yura_krykh\nГоловний кодер також він\nВведіть команду /support якшо виникли проблеми')
-        elif message.text == 'Розклад пар':
+        elif message.text == '✍️Розклад пар':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             COIM_23 = types.KeyboardButton('COIM-23')
             COFA_25 = types.KeyboardButton('СОФА-25')
@@ -139,8 +215,16 @@ def bot_message(message):
                 schedule ="Понеділок:\n8:00-9:20 1. -\n9:35-10:55 2. Теорія ігор\n11:10-12:30 3. Основи робототехніки\n12:45-14:05 4. Основи робототехніки\n\nВівторок:\n8:00-9:20 1. -\n9:35-10:55 2. -\n11:10-12:30 3. -\n12:45-14:05 4. -\n\nСереда:\n8:00-9:20 1. Правові основи Game-індустрії\n9:35-10:55 2. Правові основи Game-індустрії\n11:10-12:30 3. Технології розробки комп'ютерних ігор\n12:45-14:05 4. Технології розробки комп'ютерних ігор\n\nЧетвер:\n8:00-9:20 1. -\n9:35-10:55 2. Адміністрування комп'ютерних мереж\n11:10-12:30 3. Адміністрування комп'ютерних мереж\n12:45-14:05 4. -\n\nП'ятниця:\n8:00-9:20 1. Web-програмування\n9:35-10:55 2. -\n11:10-12:30 3. Web-програмування\n12:45-14:05 4. -"
                 bot.send_message(message.chat.id, 'Розклад пар для групи ' + group + ':\n\n' + schedule)
 
-        elif message.text == 'Випадкове число 🎲':
-            bot.send_message(message.chat.id,"ця функція покищо недоступна")
+        elif message.text == '📜Профіль':
+            user_id = message.chat.id
+            user_data = get_user_data(user_id)
+            if user_data is not None:
+                grypa, email, first_last = user_data
+                profile_info = f"📜Профіль\n📚 |̲̅G̲̲̅̅̅r̲̲̅̅у̲̲̅̅п̲̲̅̅а̲̲̅̅: {grypa}\n✉️ |̲̅E̲̲̅̅̅m̲̲̅̅̅a̲̲̅̅і̲̲̅̅l̲̲̅̅: {email}\n👨‍🎓 |̲̅П̲̲̅̅р̲̲̅̅і̲̲̅̅з̲̲̅̅в̲̲̅̅и̲̲̅̅щ̲̲̅̅е̲̲̅̅ т̲̲̅̅а̲̲̅̅ і̲̲̅̅м̲̅'я: {first_last}"
+                bot.send_message(message.chat.id, profile_info)
+                # Додати кнопку редагування профілю
+            else:
+                bot.send_message(message.chat.id, "Вас не знайдено(\nЗвернись до /support!")
 
         elif message.text == 'Аудиторії':
             bot.send_message(message.chat.id, "ця функція покищо недоступна")
@@ -150,13 +234,13 @@ def bot_message(message):
 
         elif message.text == '🔙Назад':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            item1 = types.KeyboardButton('Випадкове число 🎲')
-            item2 = types.KeyboardButton('Розклад пар')
+            item1 = types.KeyboardButton('📜Профіль')
+            item2 = types.KeyboardButton('✍️Розклад пар')
             item3 = types.KeyboardButton('Контакти викладачів')
             item4 = types.KeyboardButton('Аудиторії')
             item5 = types.KeyboardButton('Інформація про розробників')
             markup.add(item1, item2, item3, item4, item5)
-            bot.send_message(message.chat.id,"👇".format(message.from_user), reply_markup=markup)
+            bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
 
 bot.polling(none_stop=True)
