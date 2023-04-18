@@ -37,7 +37,7 @@ def start(message: types.Message):
             email TEXT NOT NULL,
             grypa TEXT NOT NULL,
             first_last TEXT NOT NULL,
-            roli TEXT NOT NULL)""")
+            roli TEXT)""")
 
     connect.commit()
     people_id = message.chat.id
