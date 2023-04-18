@@ -1,15 +1,9 @@
 import telebot
 import sqlite3
 from telebot import types
-
-
-
-# Отримання API ключів для Telegram та OpenAI
 TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
 OPENAI_API_KEY = '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'
-
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
-
 def get_user_data(user_id):
     connect = sqlite3.connect('users.db')
     cursor = connect.cursor()
@@ -17,15 +11,6 @@ def get_user_data(user_id):
     data = cursor.fetchone()
     connect.close()
     return data
-
-
-
-
-
-# Функції, для редагування профілю
-
-
-
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     connect = sqlite3.connect('users.db')
@@ -37,7 +22,7 @@ def start(message: types.Message):
             email TEXT NOT NULL,
             grypa TEXT NOT NULL,
             first_last TEXT NOT NULL,
-            roli TEXT)""")
+            roli TEXT )""")
 
     connect.commit()
     people_id = message.chat.id
@@ -92,7 +77,6 @@ def get_first_last(message: types.Message, email, group):
     keyboard.add(button_student, button_starosta,button_vikladach)
     bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
     bot.register_next_step_handler(message, get_role, email, group, first_last)
-
 def get_role(message: types.Message, email, group, first_last):
     role = message.text
 
@@ -120,7 +104,6 @@ def get_role(message: types.Message, email, group, first_last):
         # Надсилання повідомлення про неправильний вибір ролі
         bot.send_message(message.chat.id, "Виберіть роль з наданих кнопок.")
         bot.register_next_step_handler(message, get_role, email, group, first_last)
-
 def get_password(message: types.Message, role, email, group, first_last):
     password = message.text
 
@@ -155,8 +138,6 @@ def get_password(message: types.Message, role, email, group, first_last):
     item5 = types.KeyboardButton('Інформація про розробників')
     markup.add(item1, item2, item3, item4, item5)
     bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
-
-
 @bot.message_handler(commands=['functions'])
 def message_handler_start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -190,19 +171,78 @@ def message_handler_homework(message):
     # Виклик функції для запиту домашнього завдання
     msg = bot.send_message(message.chat.id, "📚 Домашнє завдання - Будь ласка, напиши домашнє завдання, яке задали вашій групі. Наступне твоє повідомлення буде надіслано усім твоїм одногрупникам 😉\nТому дивися, що пишеш це всі побачать)")
     bot.register_next_step_handler(msg, save_homework)
-
-
-
 @bot.message_handler(commands=['support'])
-def message_handler_support(message):    # Відправка автоматичного повідомлення користувачу
-    bot.send_message(message.chat.id, 'пішов нахуй Степан')
-    bot.send_message(628446966, f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: {message.chat.username}\nТекст: {message.text}')
-
+def message_handler_support(message):
+    bot.send_message(chat_id=message.chat.id, text='Будь ласка, опишіть проблему, з якою ви стикнулися, або що вас турбує?')
+    bot.register_next_step_handler(message, support_reply_handler)
+def support_reply_handler(message):
+    # Відправка повідомлення користувачем до підтримки
+    bot.send_message(chat_id=628446966, text=f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: @{message.chat.username}\nТекст: {message.text}')
+    bot.send_message(chat_id=message.chat.id, text='Дякуємо за ваше повідомлення! Наша команда підтримки зв\'яжеться з вами найближчим часом.')
 @bot.message_handler(commands=['yura'])
 def _yura(message):
     # Відправлення повідомлення
     bot.send_message(message.chat.id, "Найсексуальніший чоловік на цій планеті")
+@bot.message_handler(commands=['structure'])
+def handle_structure_command(message):
+    try:
+        # Виклик функції для створення таблиць з користувачами за групами
+        create_group_tables()
+        bot.send_message(chat_id=628446966, text='Таблиці створено успішно!')
+    except Exception as e:
+        bot.send_message(chat_id=628446966, text=f'Помилка: {e}')
+def create_group_tables():
+    # Підключення до бази даних
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
 
+    # Отримання унікальних груп з таблиці login_id
+    cursor.execute("SELECT DISTINCT grypa FROM login_id")
+    groups = cursor.fetchall()
+
+    # Створення таблиць за групами
+    for group in groups:
+        group_name = group[0].replace('-', '_') # Заміна дефісу на підкреслювання в назві таблиці
+        create_group_table(group_name)
+
+        # Отримання користувачів за групою
+        cursor.execute(f"SELECT email, first_last, grypa FROM login_id WHERE grypa = '{group[0]}'")
+        users = cursor.fetchall()
+
+        # Додавання користувачів до відповідної таблиці
+        for user in users:
+            add_user_to_group_table(group_name, user)
+
+    # Закриття підключення до бази даних
+    conn.close()
+def create_group_table(group_name):
+    # Підключення до бази даних
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Створення таблиці з користувачами за групою
+    cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS {group_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT,
+            first_last TEXT,
+            grypa TEXT)''')
+
+    # Закриття підключення до бази даних
+    conn.close()
+def add_user_to_group_table(group_name, user):
+    # Підключення до бази даних
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Додавання користувача до таблиці з користувачами за групою
+    cursor.execute(f"INSERT INTO {group_name} (email, first_last, grypa) VALUES (?, ?, ?)", (user[0], user[1], user[2]))
+
+    # Збереження змін у базі даних
+    conn.commit()
+
+    # Закриття підключення до бази даних
+    conn.close()
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
@@ -364,9 +404,6 @@ def bot_message(message):
             bot.send_message(message.chat.id, "ця функція покищо недоступна")
         elif message.text == 'Контакти викладачів':
             bot.send_message(message.chat.id, "ця функція покищо недоступна")
-
-
-
 def update_email(message):
     new_email = message.text
     user_id = message.from_user.id
@@ -387,8 +424,6 @@ def update_email(message):
         # Повернення до функції get_email для очікування наступного вводу від користувача
 
         bot.register_next_step_handler(message,update_email)
-
-# Функція для обробки наступного кроку - оновлення групи
 def update_grypa(message):
     new_grypa = message.text.upper()
     user_id = message.from_user.id
@@ -402,7 +437,6 @@ def update_grypa(message):
     bot.send_message(message.chat.id, "🦦Група оновлена успішно!")
     # Закриття підключення до бази даних
     conn.close()
-
 def update_first_last(message):
     new_first_last = message.text
     user_id = message.from_user.id
@@ -416,11 +450,4 @@ def update_first_last(message):
     bot.send_message(message.chat.id, "🦦Прізвище та ім'я оновлені успішно!")
     # Закриття підключення до бази даних
     conn.close()
-
-
-
 bot.polling(none_stop=True)
-
-
-
-
