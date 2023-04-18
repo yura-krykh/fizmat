@@ -32,11 +32,12 @@ def start(message: types.Message):
     cursor = connect.cursor()
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS login_id(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
-        email TEXT NOT NULL,
-        grypa TEXT NOT NULL,
-        first_last TEXT NOT NULL)""")
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            grypa TEXT NOT NULL,
+            first_last TEXT NOT NULL,
+            roli TEXT NOT NULL)""")
 
     connect.commit()
     people_id = message.chat.id
@@ -73,6 +74,7 @@ def get_group(message: types.Message, email):
     bot.register_next_step_handler(message, get_first_last, email, group)
 def get_first_last(message: types.Message, email, group):
     first_last = message.text
+
     connect = sqlite3.connect('users.db')
     cursor = connect.cursor()
 
@@ -83,8 +85,78 @@ def get_first_last(message: types.Message, email, group):
     cursor.execute("INSERT INTO login_id (id, username, email, grypa, first_last) VALUES(?, ?, ?, ?, ?);",
                    (user_id, user_name, email, group, first_last))
     connect.commit()
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_student = types.KeyboardButton("Студент")
+    button_starosta = types.KeyboardButton("Староста")
+    button_vikladach = types.KeyboardButton("Викладач")
+    keyboard.add(button_student, button_starosta,button_vikladach)
+    bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
+    bot.register_next_step_handler(message, get_role, email, group, first_last)
 
-    bot.send_message(message.chat.id, f"Ти, {message.chat.username} успішно зареєстрований(-на)!")
+def get_role(message: types.Message, email, group, first_last):
+    role = message.text
+
+    if role == 'Студент':
+        # Встановлення ролі студента в базі даних
+        connect = sqlite3.connect('users.db')
+        cursor = connect.cursor()
+        cursor.execute("UPDATE login_id SET roli = ? WHERE id = ?;", ('студент', message.chat.id))
+        connect.commit()
+
+        bot.send_message(message.chat.id, f"Ви зареєстровані як студент!")
+        bot.register_next_step_handler(message,message_handler_start)
+
+    elif role == 'Викладач':
+        # Запит паролю для ролі викладача
+        bot.send_message(message.chat.id, "Будь ласка, введіть пароль для викладача:")
+        bot.register_next_step_handler(message, get_password, 'викладач', email, group, first_last)
+
+    elif role == 'Староста':
+        # Запит паролю для ролі старости
+        bot.send_message(message.chat.id, "Будь ласка, введіть пароль для старости:")
+        bot.register_next_step_handler(message, get_password, 'староста', email, group, first_last)
+
+    else:
+        # Надсилання повідомлення про неправильний вибір ролі
+        bot.send_message(message.chat.id, "Виберіть роль з наданих кнопок.")
+        bot.register_next_step_handler(message, get_role, email, group, first_last)
+
+def get_password(message: types.Message, role, email, group, first_last):
+    password = message.text
+
+    if role == 'викладач' and password == '000':
+        # Встановлення ролі викладача в базі даних
+        connect = sqlite3.connect('users.db')
+        cursor = connect.cursor()
+        cursor.execute("UPDATE login_id SET roli = ? WHERE id =?;", ('викладач', message.chat.id))
+        connect.commit()
+        bot.send_message(message.chat.id, f"Ви зареєстровані як викладач!")
+        bot.register_next_step_handler(message,message_handler_start)
+    elif role == 'староста' and password == '111':
+        # Встановлення ролі старости в базі даних
+        connect = sqlite3.connect('users.db')
+        cursor = connect.cursor()
+        cursor.execute("UPDATE login_id SET roli = ? WHERE id = ?;", ('староста', message.chat.id))
+        connect.commit()
+
+        bot.send_message(message.chat.id, f"Ви зареєстровані як староста!")
+        bot.register_next_step_handler(message,message_handler_start)
+
+    else:
+        # Надсилання повідомлення про неправильний пароль
+        bot.send_message(message.chat.id, "Неправильний пароль. Спробуйте ще раз.")
+        bot.register_next_step_handler(message, get_password, role, email, group, first_last)
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('📜Профіль')
+    item2 = types.KeyboardButton('✍️Розклад пар')
+    item3 = types.KeyboardButton('Контакти викладачів')
+    item4 = types.KeyboardButton('Аудиторії')
+    item5 = types.KeyboardButton('Інформація про розробників')
+    markup.add(item1, item2, item3, item4, item5)
+    bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
+
+
 @bot.message_handler(commands=['functions'])
 def message_handler_start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -152,14 +224,14 @@ def bot_message(message):
             KH_26   = types.KeyboardButton('КН-26')
             KH_27   = types.KeyboardButton('КН-27')
             COFI_31 = types.KeyboardButton('COФІ-31')
-            COIM_32 = types.KeyboardButton('COIM-32')
+            COМІ_32 = types.KeyboardButton('COМІ-32')
             COIM_33 = types.KeyboardButton('COIM-33')
             COFA_35 = types.KeyboardButton('СОФА-35')
             KH_36   = types.KeyboardButton('КН-36')
             back    = types.KeyboardButton('🔙Назад')
-            markup.add(back,COFI_11,COFA_12,COMI_13,KH_14,COIM_15,IIP_16,DA_17,COFI_21,COMI_22,COIM_23, COFA_25, KH_26,KH_27,COFI_31,COIM_32,COIM_33,COFA_35,KH_36)
+            markup.add(back,COFI_11,COFA_12,COMI_13,KH_14,COIM_15,IIP_16,DA_17,COFI_21,COMI_22,COIM_23, COFA_25, KH_26,KH_27,COFI_31,COМІ_32,COIM_33,COFA_35,KH_36)
             bot.send_message(message.chat.id, 'Виберіть вашу групу:', reply_markup = markup)
-        elif message.text in ['COIM-23', 'СОФА-25','COФІ-11','COФA-12','COMI-13','КН-14','COІМ-15','ІІП-16','DA-17','COФІ-21','COФІ-21','COMI-22','КН-26','КН-27','COФІ-31','COIM-32','COIM-33','СОФА-35','КН-36']:
+        elif message.text in ['COIM-23', 'СОФА-25','COФІ-11','COФA-12','COMI-13','КН-14','COІМ-15','ІІП-16','DA-17','COФІ-21','COФІ-21','COMI-22','КН-26','КН-27','COФІ-31','COМІ-32','COIM-33','СОФА-35','КН-36']:
             group = message.text  # Оновлюємо значення змінної group на основі вибраної групи
             if group == 'COIM-23':
                 schedule = "Понеділок:\n8:00-9:20 1. Аналіз алгоритмів\n9:35-10:55 2. Аналіз алгоритмів\n11:10-12:30 3. Іноземна мова\n12:45-14:05 4. Фізичне виховання\n\nВівторок:\n8:00-9:20 1. -\n9:35-10:55 2. Дискретна математика\n11:10-12:30 3. Дискретна математика\n12:45-14:05 4. Основи теорії графів\n\nСереда:\n8:00-9:20 1. Комп'ютерні мережі\n9:35-10:55 2. Комп'ютерні мережі\n11:10-12:30 3. Комп'ютерна графіка\n12:45-14:05 4. Комп'ютерна графіка\n\nЧетвер:\n8:00-9:20 1. Комп'ютерна математика\n9:35-10:55 2. Комп'ютерна математика\n11:10-12:30 3. Програмування\n12:45-14:05 4. Програмування\n\nП'ятниця:\n8:00-9:20 1. Диференціальні рівняння\n9:35-10:55 2. Диференціальні рівняння\n11:10-12:30 3. Етика і естетика\n12:45-14:05 4. Етика і естетика"
@@ -203,7 +275,7 @@ def bot_message(message):
             elif group == 'COФІ-31':
                 schedule = "Понеділок:\n8:00-9:20 1. -\n9:35-10:55 2. -\n11:10-12:30 3. Загальна фізика\n12:45-14:05 4. Загальна фізика\n\nВівторок:\n8:00-9:20 1. Соціологія\n9:35-10:55 2. МНФ\n11:10-12:30 3. МНФ\n12:45-14:05 4. -\n\nСереда:\n8:00-9:20 1. Чисельні методи\n9:35-10:55 2. Чисельні методи\n11:10-12:30 3. МНФ\n12:45-14:05 4. МНФ\n\nЧетвер:\n8:00-9:20 1. Освітні технології\n9:35-10:55 2. Освітні технології\n11:10-12:30 3. Загальна фізика\n12:45-14:05 4. ПРФЗ\n\nП'ятниця:\n8:00-9:20 1. Теоретична фізика\n9:35-10:55 2. Теоретична фізика\n11:10-12:30 3. Основи сучасної електроніки\n12:45-14:05 4. Основи сучасної електроніки"
                 bot.send_message(message.chat.id, 'Розклад пар для групи ' + group + ':\n\n' + schedule)
-            elif group == 'COIM-32':
+            elif group == 'COМІ-32':
                 schedule = " Понеділок:\n8:00-9:20 1. Диференціальні рівняння\n9:35-10:55 2.Диференціальні рівняння\n11:10-12:30 3. МНМ\n12:45-14:05 4. МНМ\n\nВівторок:\n8:00-9:20 1. Математична логіка\n9:35-10:55 2. Математична логіка\n11:10-12:30 3. Соціологія\n12:45-14:05 4. Загальна фізика\n\nСереда:\n8:00-9:20 1. Чисельні методи\n9:35-10:55 2. Чисельні методи\n11:10-12:30 3. МНМ\n12:45-14:05 4. Елементарна математика\n\nЧетвер:\n8:00-9:20 1. Освітні технології\n9:35-10:55 2. Функціональний аналіз\n11:10-12:30 3. Функціональний аналіз\n12:45-14:05 4. Освітні технології\n\nП'ятниця:\n8:00-9:20 1. Загальна фізика\n9:35-10:55 2. Загальна фізика\n11:10-12:30 3. Загальна фізика\n12:45-14:05 4. -"
                 bot.send_message(message.chat.id, 'Розклад пар для групи ' + group + ':\n\n' + schedule)
             elif group == 'COIM-33':
@@ -253,7 +325,7 @@ def bot_message(message):
 
 
         elif message.text == "🛠🪪ПІБ":
-            bot.send_message(message.chat.id, "Введіть нове прізвище та ім'я:")
+            bot.send_message(message.chat.id, "Введіть нове ПІБ:")
             bot.register_next_step_handler(message, update_first_last)
 
 
