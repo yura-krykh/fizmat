@@ -1,10 +1,14 @@
 import telebot
 import sqlite3
 from telebot import types
+from telegram import ParseMode
 
+ALLOWED_CHAT_ID = 628446966
 TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
 OPENAI_API_KEY = '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'
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
+
+
 def get_user_data(user_id):
     connect = sqlite3.connect('users.db')
     cursor = connect.cursor()
@@ -126,7 +130,7 @@ def get_role(message: types.Message, email, group, first_last):
         item1 = types.KeyboardButton('📜Профіль')
         item2 = types.KeyboardButton('✍️Розклад пар')
         item3 = types.KeyboardButton('Контакти викладачів')
-        item4 = types.KeyboardButton('Аудиторії')
+        item4 = types.KeyboardButton('Журнал')
         item5 = types.KeyboardButton('Інформація про розробників')
         markup.add(item1, item2, item3, item4, item5)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
@@ -159,7 +163,7 @@ def get_password(message: types.Message, role, email, group, first_last):
         item1 = types.KeyboardButton('📜Профіль')
         item2 = types.KeyboardButton('✍️Розклад пар')
         item3 = types.KeyboardButton('Контакти викладачів')
-        item4 = types.KeyboardButton('Аудиторії')
+        item4 = types.KeyboardButton('Журнал')
         item5 = types.KeyboardButton('Інформація про розробників')
         markup.add(item1, item2, item3, item4, item5)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
@@ -175,7 +179,7 @@ def get_password(message: types.Message, role, email, group, first_last):
         item1 = types.KeyboardButton('📜Профіль')
         item2 = types.KeyboardButton('✍️Розклад пар')
         item3 = types.KeyboardButton('Контакти викладачів')
-        item4 = types.KeyboardButton('Аудиторії')
+        item4 = types.KeyboardButton('Журнал')
         item5 = types.KeyboardButton('Інформація про розробників')
         markup.add(item1, item2, item3, item4, item5)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
@@ -185,16 +189,26 @@ def get_password(message: types.Message, role, email, group, first_last):
         bot.send_message(message.chat.id, "Неправильний пароль. Спробуйте ще раз.")
         bot.register_next_step_handler(message, get_password, role, email, group, first_last)
 
-@bot.message_handler(commands=['functions'])
+@bot.message_handler(commands=['menu'])
 def message_handler_start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton('📜Профіль')
     item2 = types.KeyboardButton('✍️Розклад пар')
     item3 = types.KeyboardButton('Контакти викладачів')
-    item4 = types.KeyboardButton('Аудиторії')
+    item4 = types.KeyboardButton('Журнал')
     item5 = types.KeyboardButton('Інформація про розробників')
     markup.add(item1, item2,item3, item4, item5)
     bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
+
+
+@bot.message_handler(commands=['shurik'])
+def shurik(message):
+    bot.send_message(message.chat.id, "Помідор ваше пєрсік".format(message.from_user))
+
+@bot.message_handler(commands=['legion'])
+def shurik(message):
+    bot.send_message(message.chat.id, "пшш пшш пшш Олег пукнув\nце Олег @phantomkahueta ".format(message.from_user))
+
 @bot.message_handler(commands=['homework'])
 def message_handler_homework(message):
     homework = ""
@@ -218,22 +232,40 @@ def message_handler_homework(message):
     # Виклик функції для запиту домашнього завдання
     msg = bot.send_message(message.chat.id, "📚 Домашнє завдання - Будь ласка, напиши домашнє завдання, яке задали вашій групі. Наступне твоє повідомлення буде надіслано усім твоїм одногрупникам 😉\nТому дивися, що пишеш це всі побачать)")
     bot.register_next_step_handler(msg, save_homework)
+
+
+
 @bot.message_handler(commands=['support'])
 def message_handler_support(message):
-    bot.send_message(chat_id=message.chat.id, text='Будь ласка, опишіть проблему, з якою ви стикнулися, або що вас турбує?')
+    # Відправлення повідомлення від бота з кнопкою "🔙Назад"
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item_back = types.KeyboardButton('🔙Назад')
+    markup.add(item_back)
+    bot.send_message(chat_id=message.chat.id, text='<b>Доброго дня, будь ласка опишіть детально з якими труднощами ви зіткнулися?</b>', parse_mode=ParseMode.HTML, reply_markup=markup)
+    # Реєстрація наступного кроку з обробником повідомлення користувача
     bot.register_next_step_handler(message, support_reply_handler)
+
 def support_reply_handler(message):
-    # Відправка повідомлення користувачем до підтримки
-    bot.send_message(chat_id=628446966, text=f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: @{message.chat.username}\nТекст: {message.text}')
-    bot.send_message(chat_id=message.chat.id, text='Дякуємо за ваше повідомлення! Наша команда підтримки зв\'яжеться з вами найближчим часом.')
+    if message.text == '🔙Назад':
+        # Виклик команди "/start" при натисканні кнопки "🔙Назад"
+        message_handler_start(message)
+    else:
+        # Відправка повідомлення користувачем до підтримки
+        bot.send_message(chat_id=628446966, text=f'Користувач звернувся за допомогою:\nАйді: {message.chat.id}\nНік: @{message.chat.username}\nТекст: {message.text}')
+        bot.send_message(chat_id=message.chat.id, text='Дякуємо за ваше повідомлення! Наша команда підтримки зв\'яжеться з вами найближчим часом.')
 
 
 #################################################################################################
 @bot.message_handler(commands=['userhelp'])
 def send_help(message):
     # запитуємо у користувача айді отримувача повідомлення
-    bot.send_message(message.chat.id, "Введіть ID користувача:")
-    bot.register_next_step_handler(message, get_recipient_id)
+    chat_id = message.chat.id
+    if chat_id != ALLOWED_CHAT_ID:
+        bot.send_message(chat_id=chat_id, text='Ви не маєте доступу до цієї команди.')
+        return
+    else:
+        bot.send_message(message.chat.id, "Введіть айді користувача: ")
+        bot.register_next_step_handler(message, get_recipient_id)
 
 def get_recipient_id(message):
     # зберігаємо айді отримувача повідомлення та запитуємо текст повідомлення
@@ -278,12 +310,17 @@ def get_all_users():
     return [user[0] for user in users]
 @bot.message_handler(commands=['structure'])
 def handle_structure_command(message):
+    chat_id = message.chat.id
+    if chat_id != ALLOWED_CHAT_ID:
+        bot.send_message(chat_id=chat_id, text='Ви не маєте доступу до цієї команди.')
+        return
+
     try:
         # Виклик функції для створення таблиць з користувачами за групами
         create_group_tables()
-        bot.send_message(chat_id=628446966, text='Таблиці створено успішно!')
+        bot.send_message(chat_id=chat_id, text='Таблиці створено успішно!')
     except Exception as e:
-        bot.send_message(chat_id=628446966, text=f'Помилка: {e}')
+        bot.send_message(chat_id=chat_id, text=f'Помилка: {e}')
 
 def create_group_tables():
     # Підключення до бази даних
@@ -352,7 +389,7 @@ def bot_message(message):
             COFI_11 = types.KeyboardButton('COФІ-11')
             COFA_12 = types.KeyboardButton('COФA-12')
             COMI_13 = types.KeyboardButton('COMI-13')
-            KH_14   = types.KeyboardButton('КН-14')
+            KM_14   = types.KeyboardButton('КМ-14')
             COIM_15 = types.KeyboardButton('COІМ-15')
             IIP_16  = types.KeyboardButton('ІІП-16')
             DA_17   = types.KeyboardButton('DA-17')
@@ -379,10 +416,10 @@ def bot_message(message):
 
             back    = types.KeyboardButton('🔙Назад')
             markup.add(back)
-            markup.add(back,COFI_11,COFA_12,COMI_13,KH_14,COIM_15,IIP_16,DA_17,COFI_21,COMI_22,COIM_23, COFA_25, KH_26,KH_27,COFI_31,COМІ_32,COIM_33,COFA_35,KH_36,mCOF_11,mCOM_12,mCOIH_13,FI_41,MI_42,MI_43,COIHCK_24)
+            markup.add(back,COFI_11,COFA_12,COMI_13,KM_14,COIM_15,IIP_16,DA_17,COFI_21,COMI_22,COIM_23, COFA_25, KH_26,KH_27,COFI_31,COМІ_32,COIM_33,COFA_35,KH_36,mCOF_11,mCOM_12,mCOIH_13,FI_41,MI_42,MI_43,COIHCK_24)
 
             bot.send_message(message.chat.id, 'Виберіть вашу групу:', reply_markup = markup)
-        elif message.text in ['COIM-23', 'СОФА-25','COФІ-11','COФA-12','COMI-13','КН-14','COІМ-15','ІІП-16','DA-17','COФІ-21','COФІ-21','COMI-22','КН-26','КН-27','COФІ-31','COМІ-32','COIM-33','СОФА-35','КН-36','мСОФ-11','мСОМ-12','ФІ-41','МІ-42','ІМ-43','СОІнск-24','мСОІн-13']:
+        elif message.text in ['COIM-23', 'СОФА-25','COФІ-11','COФA-12','COMI-13','КМ-14','COІМ-15','ІІП-16','DA-17','COФІ-21','COФІ-21','COMI-22','КН-26','КН-27','COФІ-31','COМІ-32','COIM-33','СОФА-35','КН-36','мСОФ-11','мСОМ-12','ФІ-41','МІ-42','ІМ-43','СОІнск-24','мСОІн-13']:
             group = message.text  # Оновлюємо значення змінної group на основі вибраної групи
             if group == 'COIM-23':
                 schedule = "Понеділок:\n8:00-9:20 1. Аналіз алгоритмів\n9:35-10:55 2. Аналіз алгоритмів\n11:10-12:30 3. Іноземна мова\n12:45-14:05 4. Фізичне виховання\n\nВівторок:\n8:00-9:20 1. -\n9:35-10:55 2. Дискретна математика\n11:10-12:30 3. Дискретна математика\n12:45-14:05 4. Основи теорії графів\n\nСереда:\n8:00-9:20 1. Комп'ютерні мережі\n9:35-10:55 2. Комп'ютерні мережі\n11:10-12:30 3. Комп'ютерна графіка\n12:45-14:05 4. Комп'ютерна графіка\n\nЧетвер:\n8:00-9:20 1. Комп'ютерна математика\n9:35-10:55 2. Комп'ютерна математика\n11:10-12:30 3. Програмування\n12:45-14:05 4. Програмування\n\nП'ятниця:\n8:00-9:20 1. Диференціальні рівняння\n9:35-10:55 2. Диференціальні рівняння\n11:10-12:30 3. Етика і естетика\n12:45-14:05 4. Етика і естетика"
@@ -399,7 +436,7 @@ def bot_message(message):
             elif group == 'COMI-13':
                 schedule = "Понеділок:\n8:00-9:20 1. -\n9:35-10:55 2. Елементарна математика\n11:10-12:30 3. Аналітична геометрія\n12:45-14:05 4. Аналітична геометрія\n\nВівторок:\n8:00-9:20 1. -\n9:35-10:55 2. Математичний аналіз\n11:10-12:30 3. Фізичне виховання\n12:45-14:05 4. Психологія\n\nСереда:\n8:00-9:20 1. -\n9:35-10:55 2. Математичний аналіз\n11:10-12:30 3. Психологія\n12:45-14:05 4. Педагогіка\n\nЧетвер:\n8:00-9:20 1. -\n9:35-10:55 2. Математичний аналіз\n11:10-12:30 3. Іноземна мова\n12:45-14:05 4. Педагогіка\n\nП'ятниця:\n8:00-9:20 1. Лінійна алгебра\n9:35-10:55 2. Лінійна алгебра\n11:10-12:30 3. Лінійна алгебра\n12:45-14:05 4. -"
                 bot.send_message(message.chat.id, 'Розклад пар для групи ' + group + ':\n\n' + schedule)
-            elif group == 'КН-14':
+            elif group == 'КМ-14':
                 schedule = "Понеділок:\n8:00-9:20 1. Математичний аналіз\n9:35-10:55 2. Математичний аналіз\n11:10-12:30 3. Аналітична геометрія\n12:45-14:05 4. Аналітична геометрія\n\nВівторок:\n8:00-9:20 1. Рекреаційна математика\n9:35-10:55 2. Рекреаційна математика\n11:10-12:30 3. -\n12:45-14:05 4. Психологія\n\nСереда:\n8:00-9:20 1. Фізичне виховання\n9:35-10:55 2. Англійська мова\n11:10-12:30 3. Психологія\n12:45-14:05 4. Педагогіка\n\nЧетвер:\n8:00-9:20 1. -\n9:35-10:55 2. Програмування\n11:10-12:30 3. Обчислювальна математика\n12:45-14:05 4. Педагогіка\n\nП'ятниця:\n8:00-9:20 1. Лінійна алгебра\n9:35-10:55 2. Лінійна алгебра\n11:10-12:30 3. Лінійна алгебра\n12:45-14:05 4. -"
                 bot.send_message(message.chat.id, 'Розклад пар для групи ' + group + ':\n\n' + schedule)
             elif group == 'COІМ-15':
@@ -510,7 +547,7 @@ def bot_message(message):
 
 
 
-        elif message.text == 'Аудиторії':
+        elif message.text == 'Журнал':
             bot.send_message(message.chat.id, "Ця функція покищо недоступна")
         elif message.text == 'Контакти викладачів':
             bot.send_message(message.chat.id, "Ця функція покищо недоступна")
@@ -525,7 +562,7 @@ def bot_message(message):
             item1 = types.KeyboardButton('📜Профіль')
             item2 = types.KeyboardButton('✍️Розклад пар')
             item3 = types.KeyboardButton('Контакти викладачів')
-            item4 = types.KeyboardButton('Аудиторії')
+            item4 = types.KeyboardButton('Журнал')
             item5 = types.KeyboardButton('Інформація про розробників')
             markup.add(item1, item2, item3, item4, item5)
             bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
@@ -533,10 +570,7 @@ def bot_message(message):
 
 
 
-        elif message.text == 'Аудиторії':
-            bot.send_message(message.chat.id, "ця функція покищо недоступна")
-        elif message.text == 'Контакти викладачів':
-            bot.send_message(message.chat.id, "ця функція покищо недоступна")
+
 def update_email(message):
     new_email = message.text
     user_id = message.from_user.id
