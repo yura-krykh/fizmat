@@ -2,6 +2,8 @@ import telebot
 import sqlite3
 from telebot import types
 from telegram import ParseMode
+import datetime
+import urllib.request
 
 ALLOWED_CHAT_ID = 628446966
 TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
@@ -156,7 +158,8 @@ def get_role(message: types.Message, email, group, first_last):
         item3 = types.KeyboardButton('Контакти викладачів')
         item4 = types.KeyboardButton('Журнал')
         item5 = types.KeyboardButton('Інформація про розробників')
-        markup.add(item1, item2, item3, item4, item5)
+        item6 = types.KeyboardButton('Домашка')
+        markup.add(item1, item2, item3, item4, item5, item6)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
     elif role == 'Викладач':
@@ -191,7 +194,8 @@ def get_password(message: types.Message, role, email, group, first_last):
         item3 = types.KeyboardButton('Контакти викладачів')
         item4 = types.KeyboardButton('Журнал')
         item5 = types.KeyboardButton('Інформація про розробників')
-        markup.add(item1, item2, item3, item4, item5)
+        item6 = types.KeyboardButton('Домашка')
+        markup.add(item1, item2, item3, item4, item5, item6)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
     elif role == 'староста' and password == '111':
         # Встановлення ролі старости в базі даних
@@ -208,7 +212,8 @@ def get_password(message: types.Message, role, email, group, first_last):
         item3 = types.KeyboardButton('Контакти викладачів')
         item4 = types.KeyboardButton('Журнал')
         item5 = types.KeyboardButton('Інформація про розробників')
-        markup.add(item1, item2, item3, item4, item5)
+        item6 = types.KeyboardButton('Домашка')
+        markup.add(item1, item2, item3, item4, item5, item6)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
     else:
@@ -225,7 +230,8 @@ def message_handler_start(message):
     item3 = types.KeyboardButton('Контакти викладачів')
     item4 = types.KeyboardButton('Журнал')
     item5 = types.KeyboardButton('Інформація про розробників')
-    markup.add(item1, item2, item3, item4, item5)
+    item6 = types.KeyboardButton('Домашка')
+    markup.add(item1, item2, item3, item4, item5,item6)
     bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
 
@@ -238,8 +244,7 @@ def shurik(message):
 def legion(message):
     bot.send_message(message.chat.id, "пшш пшш пшш Олег пукнув\nце Олег @phantomkahueta ".format(message.from_user))
 
-
-######################################################################################################################
+#####################################################################################################################
 @bot.message_handler(commands=['homework'])
 def message_handler_homework(message):
     homework = ""
@@ -299,6 +304,119 @@ def message_handler_homework(message):
     bot.register_next_step_handler(msg, save_homework)
 
 
+
+######################################################################################################################
+
+
+@bot.message_handler(commands=['homeworkfile'])
+def check_starost(message):
+    user_id = message.from_user.id
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+    user_rol = cursor.fetchone()[0]
+    if user_rol == 'староста':
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item7 = types.KeyboardButton('🔙 Назад')
+        keyboard.add(item7)
+        bot.send_message(message.chat.id, "Надішліть мені предмет з якого вам задали дошнє завдання: ", reply_markup=keyboard)
+        bot.register_next_step_handler(message, homework_subject)
+    else:
+        bot.send_message(message.chat.id, "Ви не є старостою, ви не можете надсилати домашнє завдання")
+        message_handler_start(message)
+
+
+
+
+def homework_subject(message: types.Message):
+    subject = message.text
+    if message.text == '🔙 Назад':
+        # Виклик команди "/start" при натисканні кнопки "🔙 Назад"
+        bot.send_message(message.chat.id, 'Повертаюся в головне меню...')
+        message_handler_start(message)
+    else:
+        bot.send_message(message.chat.id,'Будь ласка, коротко опишіть, які завдання вам задані у цьому предметі:')
+        bot.register_next_step_handler(message, photo_work, subject)
+
+
+
+def photo_work(message: types.Message, subject):
+    text_work = message.text
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Так')
+    item2 = types.KeyboardButton('Ні')
+    keyboard.add(item1, item2)
+    bot.send_message(message.chat.id, "У Вас будуть якісь ще додаткові фото або файли?\nВиберіть варіант нижче", reply_markup=keyboard)
+    bot.register_next_step_handler(message, handle_extra_files, subject=subject, text_work=text_work)
+
+def handle_extra_files(message: types.Message, subject, text_work):
+    if message.text == 'Ні':
+        save_homework(message, subject, text_work)
+    elif message.text == 'Так':
+        bot.send_message(message.chat.id,'Будь ласка, надішліть мені додатковий файл або фотографію для домашнього завдання:',reply_markup=None)
+        bot.register_next_step_handler(message, save_homework_and_file, subject=subject, text_work=text_work)
+
+def save_homework(message: types.Message, subject, text_work):
+    user_id = message.from_user.id
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
+    user_grypa = cursor.fetchone()[0]
+
+    # вставляємо новий запис до таблиці з назвою, що міститься у змінній user_grypa
+    insert_query = f"INSERT INTO {user_grypa} (subject, text) VALUES (?, ?)"
+    cursor.execute(insert_query, (subject, text_work))
+    conn.commit()
+    bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
+
+def save_homework_and_file(message: types.Message, subject, text_work):
+    user_id = message.from_user.id
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
+    user_grypa = cursor.fetchone()[0]
+
+    if message.photo:
+        # якщо користувач надіслав фото, то зберігаємо його в папку "photos" на сервері
+        photo_file = message.photo[-1].file_id
+        photo_path = bot.get_file(photo_file).file_path
+        photo_name = f"{user_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        urllib.request.urlretrieve(f"https://api.telegram.org/file/bot{TELEGRAM_API_KEY}/{photo_path}", f"photos/{photo_name}")
+
+        # додаємо запис до бази даних з фото
+        insert_query = f"INSERT INTO {user_grypa} (subject, text, photo) VALUES (?, ?, ?)"
+        cursor.execute(insert_query, (subject, text_work, photo_name))
+
+
+    elif message.document:
+        # якщо користувач надіслав файл, то зберігаємо його в папку "files" на сервері
+        file_name = message.document.file_name
+        file_path = bot.get_file(message.document.file_id).file_path
+        saved_file_name = f"{user_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
+        urllib.request.urlretrieve(f"https://api.telegram.org/file/bot{TELEGRAM_API_KEY}/{file_path}", f"files/{saved_file_name}")
+
+        # додаємо запис до бази даних з файлом
+        insert_query = f"INSERT INTO {user_grypa} (subject, text, file) VALUES (?, ?, ?)"
+        cursor.execute(insert_query, (subject, text_work, saved_file_name))
+
+    conn.commit()
+    bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ##########################################################################################################################
 
 @bot.message_handler(commands=['support'])
@@ -325,6 +443,30 @@ def support_reply_handler(message):
         bot.send_message(chat_id=message.chat.id,
                          text='Дякуємо за ваше повідомлення! Наша команда підтримки зв\'яжеться з вами найближчим часом.')
 
+#################################################################################################
+@bot.message_handler(commands=['idea'])
+def message_handler_idea(message):
+    # Відправлення повідомлення від бота з кнопкою "🔙Назад"
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item_back = types.KeyboardButton('🔙Назад')
+    markup.add(item_back)
+    bot.send_message(chat_id=message.chat.id,
+                     text='<b>Яка у вас є ідея для мене? Напишіть її, і ми розглянемо її реалізацію в майбутньому.</b>',
+                     parse_mode=ParseMode.HTML, reply_markup=markup)
+    # Реєстрація наступного кроку з обробником повідомлення користувача
+    bot.register_next_step_handler(message, idea_reply_handler)
+
+
+def idea_reply_handler(message):
+    if message.text == '🔙Назад':
+        # Виклик команди "/start" при натисканні кнопки "🔙Назад"
+        message_handler_start(message)
+    else:
+        # Відправка ідеї користувачем
+        bot.send_message(chat_id=628446966,
+                         text=f'Користувач запропонував ідею для бота:\nАйді: {message.chat.id}\nНік: @{message.chat.username}\nТекст: {message.text}')
+        bot.send_message(chat_id=message.chat.id,
+                         text='Дякуємо за вашу ідею! Ми розглянемо її в майбутньому.')
 
 #################################################################################################
 @bot.message_handler(commands=['userhelp'])
@@ -414,7 +556,7 @@ def create_group_tables():
         group_name = group[0].replace("-", "_")
         table_name = f"{group_name}"
         cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {table_name} (subject INTEGER PRIMARY KEY, text TEXT NOT NULL, photo BLOB, file BLOB)")
+            f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT NOT NULL, photo BLOB, file BLOB)")
     conn.close()
 
 
@@ -423,6 +565,10 @@ def bot_message(message):
     if message.chat.type == 'private':
         if message.text == 'Інформація про розробників':
             bot.send_message(message.chat.id, 'Засновник @yura_krykh\nВведіть команду /support якшо виникли проблеми')
+
+        elif message.text == 'Домашка':
+            bot.send_message(message.chat.id, 'Функція на днях буде доступна)\nОчікуйте)))')
+
         elif message.text == '✍️Розклад пар':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             COFI_11 = types.KeyboardButton('COФІ-11')
@@ -606,7 +752,8 @@ def bot_message(message):
             item3 = types.KeyboardButton('Контакти викладачів')
             item4 = types.KeyboardButton('Журнал')
             item5 = types.KeyboardButton('Інформація про розробників')
-            markup.add(item1, item2, item3, item4, item5)
+            item6 = types.KeyboardButton('Домашка')
+            markup.add(item1, item2, item3, item4, item5, item6)
             bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
 
