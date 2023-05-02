@@ -114,7 +114,7 @@ def get_email(message: types.Message):
 
 def get_group(message: types.Message, email):
     group = message.text
-    if group == '/start' or group == "/menu" or group == '/support' or group == '/homework' or group == '/idea' or group == '/shurik':
+    if group == '/start' or group == "/menu" or group == '/support' or group == '/homework' or group == '/idea' or group == '/shurik' or r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$":
         bot.send_message(message.chat.id, "Ви ввели команду а не групу будь ласка виберіть свою групу: ")
         bot.register_next_step_handler(message, get_group, email)
     else:
