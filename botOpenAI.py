@@ -4,9 +4,11 @@ from telebot import types
 from telegram import ParseMode
 import datetime
 import urllib.request
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+import json
 
 ALLOWED_CHAT_ID = 628446966
-TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
+TELEGRAM_API_KEY = '5428270852:AAEbBDt8RiYgiizDEC7o5oTz4vl-x7Ls5ng'
 OPENAI_API_KEY = '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'
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
 
@@ -53,70 +55,73 @@ def start(message: types.Message):
 
 def get_email(message: types.Message):
     email = message.text
-
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-
-    # Check if the email exists in the Email_Base table
-    cursor.execute("SELECT * FROM Email_Base WHERE Email_Address=?", (email,))
-    row = cursor.fetchone()
-    if row:
-        # Запит групи
-
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item1 = types.KeyboardButton('СОФІ-11')
-        item2 = types.KeyboardButton('СОФА-12')
-        item3 = types.KeyboardButton('СОМІ-13')
-        item4 = types.KeyboardButton('КМ-14')
-        item5 = types.KeyboardButton('СОІМ-15')
-        item6 = types.KeyboardButton('ІІП-16')
-        item7 = types.KeyboardButton('DA-17')
-        item8 = types.KeyboardButton('СОФІ-21')
-        item9 = types.KeyboardButton('СОМІ-22')
-        item10 = types.KeyboardButton('СОІМ-23')
-        item11 = types.KeyboardButton('СОФА-25')
-        item12 = types.KeyboardButton('КН-26')
-        item13 = types.KeyboardButton('КН-27')
-        item14 = types.KeyboardButton('СОФІ-31')
-        item15 = types.KeyboardButton('СОМІ-32')
-        item16 = types.KeyboardButton('СОІМ-33')
-        item17 = types.KeyboardButton('СОФА-35')
-        item18 = types.KeyboardButton('КН-36')
-        item19 = types.KeyboardButton('СОФІ-41')
-        item20 = types.KeyboardButton('СОМІ-42')
-        item21 = types.KeyboardButton('СОІМ-43')
-        item22 = types.KeyboardButton('СОІнск-24')
-        item23 = types.KeyboardButton('мСОФ-11')
-        item24 = types.KeyboardButton('мСОМ-12')
-        item25 = types.KeyboardButton('мСОІн-13')
-        item26 = types.KeyboardButton('мСОФ-21')
-        item27 = types.KeyboardButton('мСОМ-22')
-        item28 = types.KeyboardButton('мСОІн-23')
-
-        keyboard.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13,
-                     item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24, item25,
-                     item26, item27, item28)
-        bot.send_message(message.chat.id,
-                         "Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",
-                         reply_markup=keyboard)
-        bot.register_next_step_handler(message, get_group, email)
-    else:
-        # Email does not exist, send error message
-        bot.send_message(message.chat.id,
-                         "Вашої пошти не знайдено в базі даних фізмату. Будь ласка, введіть свою пошту ще раз правильно.")
-        # Return to the get_email function to wait for the next input from the user
+    if email == '/start' or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik':
+        bot.send_message(message.chat.id, "Ви ввели команду а не пошту будь ласка введіть свою фізматівську пошту: ")
         bot.register_next_step_handler(message, get_email)
+    else:
 
-    cursor.close()
-    conn.close()
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+
+        # Check if the email exists in the Email_Base table
+        cursor.execute("SELECT * FROM Email_Base WHERE Email_Address=?", (email,))
+        row = cursor.fetchone()
+        if row:
+            # Запит групи
+
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item1 = types.KeyboardButton('СОФІ-11')
+            item2 = types.KeyboardButton('СОФА-12')
+            item3 = types.KeyboardButton('СОМІ-13')
+            item4 = types.KeyboardButton('КМ-14')
+            item5 = types.KeyboardButton('СОІМ-15')
+            item6 = types.KeyboardButton('ІІП-16')
+            item7 = types.KeyboardButton('DA-17')
+            item8 = types.KeyboardButton('СОФІ-21')
+            item9 = types.KeyboardButton('СОМІ-22')
+            item10 = types.KeyboardButton('СОІМ-23')
+            item11 = types.KeyboardButton('СОФА-25')
+            item12 = types.KeyboardButton('КН-26')
+            item13 = types.KeyboardButton('КН-27')
+            item14 = types.KeyboardButton('СОФІ-31')
+            item15 = types.KeyboardButton('СОМІ-32')
+            item16 = types.KeyboardButton('СОІМ-33')
+            item17 = types.KeyboardButton('СОФА-35')
+            item18 = types.KeyboardButton('КН-36')
+            item19 = types.KeyboardButton('СОФІ-41')
+            item20 = types.KeyboardButton('СОМІ-42')
+            item21 = types.KeyboardButton('СОІМ-43')
+            item22 = types.KeyboardButton('СОІнск-24')
+            item23 = types.KeyboardButton('мСОФ-11')
+            item24 = types.KeyboardButton('мСОМ-12')
+            item25 = types.KeyboardButton('мСОІн-13')
+            item26 = types.KeyboardButton('мСОФ-21')
+            item27 = types.KeyboardButton('мСОМ-22')
+            item28 = types.KeyboardButton('мСОІн-23')
+
+            keyboard.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13,item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24, item25,item26, item27, item28)
+            bot.send_message(message.chat.id,"Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим.",reply_markup=keyboard)
+            bot.register_next_step_handler(message, get_group, email)
+        else:
+            # Email does not exist, send error message
+            bot.send_message(message.chat.id,"Вашої пошти не знайдено в базі даних фізмату. Будь ласка, введіть свою пошту ще раз правильно.")
+            # Return to the get_email function to wait for the next input from the user
+            bot.register_next_step_handler(message, get_email)
+
+        cursor.close()
+        conn.close()
 
 
 def get_group(message: types.Message, email):
-    group = message.text.upper().replace('-', '_')
-
-    # Запит імені та прізвища
-    bot.send_message(message.chat.id, "Будь ласка, введіть своє ПІБ:")
-    bot.register_next_step_handler(message, get_first_last, email, group)
+    group = message.text
+    if group == '/start' or group == "/menu" or group == '/support' or group == '/homework' or group == '/idea' or group == '/shurik':
+        bot.send_message(message.chat.id, "Ви ввели команду а не групу будь ласка виберіть свою групу: ")
+        bot.register_next_step_handler(message, get_group, email)
+    else:
+        # Запит імені та прізвища
+        group = message.text.upper().replace('-', '_')
+        bot.send_message(message.chat.id, "Будь ласка, введіть своє ПІБ:")
+        bot.register_next_step_handler(message, get_first_last, email, group)
 
 
 def get_first_last(message: types.Message, email, group):
@@ -245,85 +250,35 @@ def legion(message):
     bot.send_message(message.chat.id, "пшш пшш пшш Олег пукнув\nце Олег @phantomkahueta ".format(message.from_user))
 
 #####################################################################################################################
-@bot.message_handler(commands=['homework'])
-def message_handler_homework(message):
-    homework = ""
 
-    def save_homework(message):
-        nonlocal homework
-        homework = message.text or ''
-        if message.photo:
-
-            file_id = message.photo[-1].file_id
-            file_info = bot.get_file(file_id)
-            downloaded_file = bot.download_file(file_info.file_path)
-            file_name = f"{message.from_user.id}_{file_id}.jpg"
-            with open(file_name, 'wb') as new_file:
-                new_file.write(downloaded_file)
-
-            if message.caption:
-                homework += f"\nText: {message.caption}"
-            homework += f"\nPhoto: {file_name}"
-        elif message.document:
-
-            file_id = message.document.file_id
-            file_name = message.document.file_name
-            file_info = bot.get_file(file_id)
-            downloaded_file = bot.download_file(file_info.file_path)
-            with open(file_name, 'wb') as new_file:
-                new_file.write(downloaded_file)
-            homework += f"\nFile: {file_name}"
-        bot.send_message(message.chat.id, f"✅ Домашнє завдання збережено: {homework}")
-        with sqlite3.connect('users.db') as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT grypa FROM login_id WHERE id = ?", (message.from_user.id,))
-            user_grypa = cursor.fetchone()[0]
-        if user_grypa is not None:
-            with sqlite3.connect('users.db') as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT id FROM login_id WHERE grypa = ?", (user_grypa,))
-                rows = cursor.fetchall()
-                for row in rows:
-                    if message.photo:
-
-                        with open(file_name, 'rb') as photo_file:
-                            bot.send_photo(row[0], photo_file,
-                                           caption=f"📚 Домашнє завдання: \n(Надіслано від @{message.chat.username} )")
-                    elif message.document:
-                        # Send the file
-                        with open(file_name, 'rb') as document_file:
-                            bot.send_document(row[0], document_file,
-                                              caption=f"📚 Домашнє завдання: {homework} \n(Надіслано від @{message.chat.username} )")
-                    else:
-                        bot.send_message(row[0],
-                                         f"📚 Домашнє завдання: {homework} \n(Надіслано від @{message.chat.username} )")
-
-    # Виклик функції для запиту домашнього завдання
-    msg = bot.send_message(message.chat.id,
-                           "📚 Домашнє завдання - Будь ласка, напиши домашнє завдання, яке задали вашій групі. Наступне твоє повідомлення буде надіслано усім твоїм одногрупникам 😉\nТому дивися, що пишеш це всі побачать)")
-    bot.register_next_step_handler(msg, save_homework)
 
 
 
 ######################################################################################################################
 
 
-@bot.message_handler(commands=['homeworkfile'])
+@bot.message_handler(commands=['homework'])
 def check_starost(message):
     user_id = message.from_user.id
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
-    user_rol = cursor.fetchone()[0]
-    if user_rol == 'староста':
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item7 = types.KeyboardButton('🔙 Назад')
-        keyboard.add(item7)
-        bot.send_message(message.chat.id, "Надішліть мені предмет з якого вам задали дошнє завдання: ", reply_markup=keyboard)
-        bot.register_next_step_handler(message, homework_subject)
+    user_rol = cursor.fetchone()
+    if user_rol:
+        user_rol = user_rol[0]
+        if user_rol == 'староста':
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item7 = types.KeyboardButton('🔙 Назад')
+            keyboard.add(item7)
+            bot.send_message(message.chat.id, "Надішліть мені предмет з якого вам задали дошнє завдання: ", reply_markup=keyboard)
+            bot.register_next_step_handler(message, homework_subject)
+        else:
+            bot.send_message(message.chat.id, "Ви не є старостою, ви не можете надсилати домашнє завдання")
+            message_handler_start(message)
     else:
-        bot.send_message(message.chat.id, "Ви не є старостою, ви не можете надсилати домашнє завдання")
+        bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
         message_handler_start(message)
+
 
 
 
@@ -368,6 +323,15 @@ def save_homework(message: types.Message, subject, text_work):
     cursor.execute(insert_query, (subject, text_work))
     conn.commit()
     bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
+
+    if user_grypa is not None:
+        with sqlite3.connect('users.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM login_id WHERE grypa = ?", (user_grypa,))
+            rows = cursor.fetchall()
+            for row in rows:
+                bot.send_message(row[0], f"У вас з'явилося нове домашнє завдання у предметі {subject}. Будь ласка, перегляньте його. (Надіслано від @{message.chat.username})")
+
 
 def save_homework_and_file(message: types.Message, subject, text_work):
     user_id = message.from_user.id
@@ -738,7 +702,28 @@ def bot_message(message):
         elif message.text == 'Журнал':
             bot.send_message(message.chat.id, "Ця функція покищо недоступна")
         elif message.text == 'Контакти викладачів':
-            bot.send_message(message.chat.id, "Ця функція покищо недоступна")
+            conn = sqlite3.connect('users.db')
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT Викладач FROM Teachers")
+            teachers = cursor.fetchall()
+
+
+            keyboard = []
+            for i in range(0, len(teachers), 3):
+                row = []
+                for j in range(i, min(i + 3, len(teachers))):
+                    teacher_name = teachers[j][0]
+                    row.append(InlineKeyboardButton(teacher_name, callback_data=teacher_name))
+                keyboard.append(row)
+
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            reply_markup = json.dumps(reply_markup.to_dict())
+
+            conn.close()
+            bot.send_message(message.chat.id, "Оберіть викладача за прізвищем якого шукаєте:",reply_markup=reply_markup)
+
 
 
 
