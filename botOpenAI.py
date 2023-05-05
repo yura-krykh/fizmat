@@ -8,7 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import json
 
 ALLOWED_CHAT_ID = 628446966
-TELEGRAM_API_KEY = '5428270852:AAEbBDt8RiYgiizDEC7o5oTz4vl-x7Ls5ng'
+TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
 OPENAI_API_KEY = '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'
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
 
@@ -55,15 +55,12 @@ def start(message: types.Message):
 
 def get_email(message: types.Message):
     email = message.text
-    if email == '/start' or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik':
+    if email == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
         bot.send_message(message.chat.id, "Ви ввели команду а не пошту будь ласка введіть свою фізматівську пошту: ")
         bot.register_next_step_handler(message, get_email)
     else:
-
         conn = sqlite3.connect('users.db')
         cursor = conn.cursor()
-
-        # Check if the email exists in the Email_Base table
         cursor.execute("SELECT * FROM Email_Base WHERE Email_Address=?", (email,))
         row = cursor.fetchone()
         if row:
@@ -100,7 +97,7 @@ def get_email(message: types.Message):
             item28 = types.KeyboardButton('мСОІн-23')
 
             keyboard.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13,item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24, item25,item26, item27, item28)
-            bot.send_message(message.chat.id,"Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим.",reply_markup=keyboard)
+            bot.send_message(message.chat.id,"Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",reply_markup=keyboard)
             bot.register_next_step_handler(message, get_group, email)
         else:
             # Email does not exist, send error message
@@ -114,16 +111,16 @@ def get_email(message: types.Message):
 
 def get_group(message: types.Message, email):
     group = message.text
-    if group == '/start' or group == "/menu" or group == '/support' or group == '/homework' or group == '/idea' or group == '/shurik' or r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$":
-        bot.send_message(message.chat.id, "Ви ввели команду а не групу будь ласка виберіть свою групу: ")
+    if group not in ['СОІМ-23', 'СОФА-25', 'COФІ-11', 'COФA-12', 'COMI-13', 'КМ-14', 'COІМ-15', 'ІІП-16','DA-17', 'COФІ-21', 'COФІ-21', 'COMI-22', 'КН-26', 'КН-27', 'COФІ-31', 'COМІ-32','COIM-33', 'СОФА-35', 'КН-36', 'мСОФ-11', 'мСОМ-12', 'ФІ-41', 'МІ-42', 'ІМ-43','СОІнск-24', 'мСОІн-13']:
+        bot.send_message(message.chat.id,"Ви ввели не правильну групу виберіть ще раз свою групу:")
+        bot.register_next_step_handler(message, get_group, email)
+    elif email == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
+        bot.send_message(message.chat.id, "Будь ласка будьте уважніші ви ввели команду а не назву групи, будь ласка введіть свою групу😡 ")
         bot.register_next_step_handler(message, get_group, email)
     else:
-        # Запит імені та прізвища
         group = message.text.upper().replace('-', '_')
         bot.send_message(message.chat.id, "Будь ласка, введіть своє ПІБ:")
         bot.register_next_step_handler(message, get_first_last, email, group)
-
-
 def get_first_last(message: types.Message, email, group):
     first_last = message.text
 
@@ -157,6 +154,7 @@ def get_role(message: types.Message, email, group, first_last):
         connect.commit()
 
         bot.send_message(message.chat.id, f"Ви зареєстровані як студент!")
+        create_group_tables()
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         item1 = types.KeyboardButton('📜Профіль')
         item2 = types.KeyboardButton('✍️Розклад пар')
@@ -193,6 +191,7 @@ def get_password(message: types.Message, role, email, group, first_last):
         cursor.execute("UPDATE login_id SET roli = ? WHERE id =?;", ('викладач', message.chat.id))
         connect.commit()
         bot.send_message(message.chat.id, f"Ви зареєстровані як викладач!")
+        create_group_tables()
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         item1 = types.KeyboardButton('📜Профіль')
         item2 = types.KeyboardButton('✍️Розклад пар')
@@ -210,6 +209,7 @@ def get_password(message: types.Message, role, email, group, first_last):
         connect.commit()
 
         bot.send_message(message.chat.id, f"Ви зареєстровані як староста!")
+        create_group_tables()
 
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         item1 = types.KeyboardButton('📜Профіль')
@@ -221,10 +221,51 @@ def get_password(message: types.Message, role, email, group, first_last):
         markup.add(item1, item2, item3, item4, item5, item6)
         bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
+
     else:
         # Надсилання повідомлення про неправильний пароль
         bot.send_message(message.chat.id, "Неправильний пароль. Спробуйте ще раз.")
         bot.register_next_step_handler(message, get_password, role, email, group, first_last)
+
+def create_group_tables():
+    # Встановлення з'єднання з базою даних
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    # Отримання унікальних груп з бази даних
+    cursor.execute("SELECT DISTINCT grypa FROM login_id")
+    groups = cursor.fetchall()
+    # Створення таблиць для кожної групи
+    for group in groups:
+        group_name = group[0].replace("-", "_")
+        table_name = f"{group_name}"
+        cursor.execute(
+            f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT , photo BLOB, file BLOB)")
+    conn.close()
+    create_user_tables()
+
+
+def create_user_tables():
+    # підключення до бази даних
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    # отримання унікальних ідентифікаторів користувачів з таблиці login_id
+    cursor.execute("SELECT DISTINCT id FROM login_id")
+    users = cursor.fetchall()
+    # створення таблиць для кожного користувача
+    for user in users:
+        user_id = user[0]
+        table_name = f"table_{user_id}"
+        cursor.execute(
+            f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT , photo BLOB, file BLOB, actual TEXT)")
+    conn.close()
+
+
+
+
+
+
+
+###############################################################################################################################################################################
 
 
 @bot.message_handler(commands=['menu'])
@@ -278,11 +319,6 @@ def check_starost(message):
     else:
         bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
         message_handler_start(message)
-
-
-
-
-
 def homework_subject(message: types.Message):
     subject = message.text
     if message.text == '🔙 Назад':
@@ -292,9 +328,6 @@ def homework_subject(message: types.Message):
     else:
         bot.send_message(message.chat.id,'Будь ласка, коротко опишіть, які завдання вам задані у цьому предметі:')
         bot.register_next_step_handler(message, photo_work, subject)
-
-
-
 def photo_work(message: types.Message, subject):
     text_work = message.text
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -303,68 +336,74 @@ def photo_work(message: types.Message, subject):
     keyboard.add(item1, item2)
     bot.send_message(message.chat.id, "У Вас будуть якісь ще додаткові фото або файли?\nВиберіть варіант нижче", reply_markup=keyboard)
     bot.register_next_step_handler(message, handle_extra_files, subject=subject, text_work=text_work)
-
 def handle_extra_files(message: types.Message, subject, text_work):
     if message.text == 'Ні':
         save_homework(message, subject, text_work)
     elif message.text == 'Так':
         bot.send_message(message.chat.id,'Будь ласка, надішліть мені додатковий файл або фотографію для домашнього завдання:',reply_markup=None)
         bot.register_next_step_handler(message, save_homework_and_file, subject=subject, text_work=text_work)
-
 def save_homework(message: types.Message, subject, text_work):
     user_id = message.from_user.id
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
     user_grypa = cursor.fetchone()[0]
-
     # вставляємо новий запис до таблиці з назвою, що міститься у змінній user_grypa
     insert_query = f"INSERT INTO {user_grypa} (subject, text) VALUES (?, ?)"
     cursor.execute(insert_query, (subject, text_work))
     conn.commit()
     bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
-
-    if user_grypa is not None:
-        with sqlite3.connect('users.db') as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id FROM login_id WHERE grypa = ?", (user_grypa,))
-            rows = cursor.fetchall()
-            for row in rows:
-                bot.send_message(row[0], f"У вас з'явилося нове домашнє завдання у предметі {subject}. Будь ласка, перегляньте його. (Надіслано від @{message.chat.username})")
-
-
+    same_group(message)
 def save_homework_and_file(message: types.Message, subject, text_work):
     user_id = message.from_user.id
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
     user_grypa = cursor.fetchone()[0]
-
     if message.photo:
         # якщо користувач надіслав фото, то зберігаємо його в папку "photos" на сервері
         photo_file = message.photo[-1].file_id
         photo_path = bot.get_file(photo_file).file_path
         photo_name = f"{user_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         urllib.request.urlretrieve(f"https://api.telegram.org/file/bot{TELEGRAM_API_KEY}/{photo_path}", f"photos/{photo_name}")
-
         # додаємо запис до бази даних з фото
         insert_query = f"INSERT INTO {user_grypa} (subject, text, photo) VALUES (?, ?, ?)"
         cursor.execute(insert_query, (subject, text_work, photo_name))
-
-
     elif message.document:
         # якщо користувач надіслав файл, то зберігаємо його в папку "files" на сервері
         file_name = message.document.file_name
         file_path = bot.get_file(message.document.file_id).file_path
         saved_file_name = f"{user_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{file_name}"
         urllib.request.urlretrieve(f"https://api.telegram.org/file/bot{TELEGRAM_API_KEY}/{file_path}", f"files/{saved_file_name}")
-
         # додаємо запис до бази даних з файлом
         insert_query = f"INSERT INTO {user_grypa} (subject, text, file) VALUES (?, ?, ?)"
         cursor.execute(insert_query, (subject, text_work, saved_file_name))
-
     conn.commit()
     bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
+    same_group(message)
+
+
+def same_group(message):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    chat_id = message.chat.id
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {chat_id}")
+    user_group = cursor.fetchone()[0]
+    cursor.execute(f"SELECT id FROM login_id WHERE grypa = '{user_group}'")
+    rows = cursor.fetchall()
+    for row in rows:
+        user_id = row[0]
+        cursor.execute(f"DELETE FROM table_{user_id}")
+        cursor.execute(
+            f"INSERT INTO table_{user_id} (subject, text, photo, file) SELECT subject, text, photo, file FROM {user_group}")
+        bot.send_message(user_id, f"У вас з'явилося нове домашнє завдання. Будь ласка, перегляньте його.")
+    conn.commit()
+    conn.close()
+
+
+
+
+########################################################################################################################
 
 
 
@@ -375,13 +414,7 @@ def save_homework_and_file(message: types.Message, subject, text_work):
 
 
 
-
-
-
-
-
-
-##########################################################################################################################
+    ##########################################################################################################################
 
 @bot.message_handler(commands=['support'])
 def message_handler_support(message):
@@ -493,45 +526,50 @@ def get_all_users():
     return [user[0] for user in users]
 
 
-@bot.message_handler(commands=['structure'])
-def handle_structure_command(message):
-    chat_id = message.chat.id
-    if chat_id != ALLOWED_CHAT_ID:
-        bot.send_message(chat_id=chat_id, text='Ви не маєте доступу до цієї команди.')
-        return
-
-    try:
-        # Виклик функції для створення таблиць з користувачами за групами
-        create_group_tables()
-        bot.send_message(chat_id=chat_id, text='Таблиці створено успішно!')
-    except Exception as e:
-        bot.send_message(chat_id=chat_id, text=f'Помилка: {e}')
 
 
-def create_group_tables():
-    # Встановлення з'єднання з базою даних
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    # Отримання унікальних груп з бази даних
-    cursor.execute("SELECT DISTINCT grypa FROM login_id")
-    groups = cursor.fetchall()
-    # Створення таблиць для кожної групи
-    for group in groups:
-        group_name = group[0].replace("-", "_")
-        table_name = f"{group_name}"
-        cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT NOT NULL, photo BLOB, file BLOB)")
-    conn.close()
+
+
 
 
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
         if message.text == 'Інформація про розробників':
-            bot.send_message(message.chat.id, 'Засновник @yura_krykh\nВведіть команду /support якшо виникли проблеми')
+            bot.send_message(message.chat.id, '@yura_krykh\nЯ думаю цього досить')
 
         elif message.text == 'Домашка':
-            bot.send_message(message.chat.id, 'Функція на днях буде доступна)\nОчікуйте)))')
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item1 = types.KeyboardButton('Перегляд домашки')
+            item2 = types.KeyboardButton('Відмітити виконане дз')
+            item3 = types.KeyboardButton('🔙Назад')
+            markup.add(item1)
+            markup.add(item2)
+            markup.add(item3)
+            bot.send_message(message.chat.id, 'Виберіть:', reply_markup=markup)
+
+
+        elif message.text == 'Перегляд домашки':
+            conn = sqlite3.connect('users.db')
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM table_{message.chat.id}")
+            rows = cursor.fetchall()
+            if len(rows) == 0:
+                bot.send_message(message.chat.id, "У вас немає домашніх завдань.")
+            else:
+                for row in rows:
+                    subject = row[0]
+                    text = row[1]
+                    caption = f"Предмет: {subject}\nПояснення: {text}"
+                    bot.send_message(message.chat.id, caption)
+
+            conn.close()
+
+
+
+
+        elif message.text == 'Відмітити виконане дз':
+            bot.send_message(message.chat.id, "Чекайте нічо не працює(")
 
         elif message.text == '✍️Розклад пар':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -723,12 +761,6 @@ def bot_message(message):
 
             conn.close()
             bot.send_message(message.chat.id, "Оберіть викладача за прізвищем якого шукаєте:",reply_markup=reply_markup)
-
-
-
-
-
-
 
         elif message.text == '🔙Назад':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
