@@ -8,7 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import json
 
 ALLOWED_CHAT_ID = 628446966
-TELEGRAM_API_KEY = '5646599316:AAFVGWqEAgPmlvpUByhFwmbDjB-1UFY7LWY'
+TELEGRAM_API_KEY = '5428270852:AAEbBDt8RiYgiizDEC7o5oTz4vl-x7Ls5ng'
 OPENAI_API_KEY = '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'
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
 
@@ -353,7 +353,7 @@ def save_homework(message: types.Message, subject, text_work):
     cursor.execute(insert_query, (subject, text_work))
     conn.commit()
     bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
-    same_group(message)
+    save_studend_text(message, subject, text_work)
 def save_homework_and_file(message: types.Message, subject, text_work):
     user_id = message.from_user.id
     conn = sqlite3.connect('users.db')
@@ -369,6 +369,7 @@ def save_homework_and_file(message: types.Message, subject, text_work):
         # додаємо запис до бази даних з фото
         insert_query = f"INSERT INTO {user_grypa} (subject, text, photo) VALUES (?, ?, ?)"
         cursor.execute(insert_query, (subject, text_work, photo_name))
+        save_studend_photo(message, subject, text_work, photo_name)
     elif message.document:
         # якщо користувач надіслав файл, то зберігаємо його в папку "files" на сервері
         file_name = message.document.file_name
@@ -378,12 +379,13 @@ def save_homework_and_file(message: types.Message, subject, text_work):
         # додаємо запис до бази даних з файлом
         insert_query = f"INSERT INTO {user_grypa} (subject, text, file) VALUES (?, ?, ?)"
         cursor.execute(insert_query, (subject, text_work, saved_file_name))
+        save_studend_file(message, subject, text_work, saved_file_name)
     conn.commit()
     bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
-    same_group(message)
 
 
-def same_group(message):
+
+def save_studend_file(message, subject, text_work, saved_file_name):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     chat_id = message.chat.id
@@ -393,10 +395,40 @@ def same_group(message):
     rows = cursor.fetchall()
     for row in rows:
         user_id = row[0]
-        cursor.execute(f"DELETE FROM table_{user_id}")
-        cursor.execute(
-            f"INSERT INTO table_{user_id} (subject, text, photo, file) SELECT subject, text, photo, file FROM {user_group}")
-        bot.send_message(user_id, f"У вас з'явилося нове домашнє завдання. Будь ласка, перегляньте його.")
+        insert_query = f"INSERT INTO table_{user_id} (subject, text, file) VALUES (?, ?, ?)"
+        cursor.execute(insert_query, (subject, text_work, saved_file_name))
+    conn.commit()
+    conn.close()
+
+def save_studend_photo(message, subject, text_work, photo_name):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    chat_id = message.chat.id
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {chat_id}")
+    user_group = cursor.fetchone()[0]
+    cursor.execute(f"SELECT id FROM login_id WHERE grypa = '{user_group}'")
+    rows = cursor.fetchall()
+    for row in rows:
+        user_id = row[0]
+        insert_query = f"INSERT INTO table_{user_id} (subject, text, photo) VALUES (?, ?, ?)"
+        cursor.execute(insert_query, (subject, text_work, photo_name))
+
+    conn.commit()
+    conn.close()
+
+def save_studend_text(message, subject, text_work):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    chat_id = message.chat.id
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {chat_id}")
+    user_group = cursor.fetchone()[0]
+    cursor.execute(f"SELECT id FROM login_id WHERE grypa = '{user_group}'")
+    rows = cursor.fetchall()
+    for row in rows:
+        user_id = row[0]
+        insert_query =  f"INSERT INTO table_{user_id} (subject, text) VALUES (?, ?)"
+        cursor.execute(insert_query, (subject, text_work))
+
     conn.commit()
     conn.close()
 
@@ -536,7 +568,7 @@ def get_all_users():
 def bot_message(message):
     if message.chat.type == 'private':
         if message.text == 'Інформація про розробників':
-            bot.send_message(message.chat.id, '@yura_krykh\nЯ думаю цього досить')
+            bot.send_message(message.chat.id, 'Засновник @yura_krykh\nВведіть команду /support якшо виникли проблеми')
 
         elif message.text == 'Домашка':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -547,6 +579,7 @@ def bot_message(message):
             markup.add(item2)
             markup.add(item3)
             bot.send_message(message.chat.id, 'Виберіть:', reply_markup=markup)
+
 
 
         elif message.text == 'Перегляд домашки':
@@ -560,6 +593,8 @@ def bot_message(message):
                 for row in rows:
                     subject = row[0]
                     text = row[1]
+                    photo = row[2]
+                    file = row[3]
                     caption = f"Предмет: {subject}\nПояснення: {text}"
                     bot.send_message(message.chat.id, caption)
 
