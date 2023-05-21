@@ -811,6 +811,8 @@ def bot_message(message):
 
 def update_email(message):
     new_email = message.text
+    if new_email == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
+        bot.send_message(message.chat.id, "Ви ввели команду а не пошту будь ласка введіть свою пошту: ")
     user_id = message.from_user.id
 
     # Перевірка чи введений email закінчується на "@fizmat.tnpu.edu.ua"
@@ -834,6 +836,8 @@ def update_email(message):
 
 def update_grypa(message):
     new_grypa = message.text.upper()
+    if new_grypa == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
+        bot.send_message(message.chat.id, "Ви ввели команду а не групу будь ласка введіть свою групу пошту: ")
     user_id = message.from_user.id
     # Встановлення підключення до бази даних
     conn = sqlite3.connect('users.db')
@@ -849,6 +853,8 @@ def update_grypa(message):
 
 def update_first_last(message):
     new_first_last = message.text
+    if new_first_last == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
+        bot.send_message(message.chat.id, "Ви ввели команду а не ПІБ будь ласка введіть свій ПІБ: ")
     user_id = message.from_user.id
     # Встановлення підключення до бази даних
     conn = sqlite3.connect('users.db')
