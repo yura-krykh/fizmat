@@ -772,35 +772,14 @@ def bot_message(message):
         elif message.text == '🔙Назад':
             message_handler_start(message)
 
-        elif message.text == 'Назад🔙':
-            user_id = message.from_user.id
-            conn = sqlite3.connect('users.db')
-            cursor = conn.cursor()
-            cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
-            user_rol = cursor.fetchone()
-            if user_rol:
-                user_rol = user_rol[0]
-                if user_rol == 'староста':
-                    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-                    item1 = types.KeyboardButton('Понеділок')
-                    item2 = types.KeyboardButton('Вівторок')
-                    item3 = types.KeyboardButton('Середа')
-                    item4 = types.KeyboardButton('Четвер')
-                    item5 = types.KeyboardButton('П\'ятниця')
-                    back = types.KeyboardButton('Назад🔙')
-                    keyboard.add(back)
-                    keyboard.add(item1, item2, item3, item4, item5)
 
-                    bot.send_message(message.chat.id, "АГА", reply_markup=keyboard)
-                    bot.register_next_step_handler(message, redaguvanna, user_id)
-                else:
-                    bot.send_message(message.chat.id, "Ви не є старостою, ви не можете користуватися цим меню)")
-                    message_handler_start(message)
 
 
 def redaguvanna(message,user_id):
     den = message.text
-    if den not in ['Понеділок','Вівторок','Середа','Четвер','П\'ятниця']:
+    if den == "🔙Назад":
+        message_handler_start(message)
+    elif den not in ['Понеділок','Вівторок','Середа','Четвер','П\'ятниця']:
         bot.send_message(user_id, "Ви ввели не правильний день, будь ласка виберіть день із наявних кнопок: ")
         bot.register_next_step_handler(message, redaguvanna, user_id)
     else:
@@ -809,14 +788,34 @@ def redaguvanna(message,user_id):
         cursor = conn.cursor()
         cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
         user_grypa = cursor.fetchone()[0]
-        back = types.KeyboardButton('Назад🔙')
+        back = types.KeyboardButton('🔙Назад')
         key.add(back)
-        bot.send_message(message.chat.id, f"Ви вибрали {den}...", reply_markup=key)#Продовження допиши як правильно вставляти
-        bot.register_next_step_handler(message, redaguvanna2, user_id, user_grypa)
+        bot.send_message(message.chat.id, f"Ви вибрали {den}, будь ласка надішліть відредагований розкла.\nЗА ТАКИМ ЗРАЗКОМ!!!", reply_markup=key)#Продовження допиши як правильно вставляти
+        redaguvanna2(message, user_id, user_grypa, den)
 
 
-def redaguvanna2(message, user_id,user_grypa):
-    print(user_grypa)
+def redaguvanna2(message, user_id,user_grypa,den):
+    days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця']
+    den_123 = days.index(den)
+    # Встановлюємо з'єднання з базою даних
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    # Виконуємо запит, щоб отримати перший рядок з таблиці "rosklad_СОІМ_23"
+    cursor.execute(f'SELECT * FROM rosklad_{user_grypa}')
+    # Отримуємо результат запиту (перший рядок таблиці)
+    first_row = cursor.fetchall()[den_123]
+    mess = ''
+    for j, item in enumerate(first_row):
+        if item is not None:
+            mess += f"{j + 1}. {item}\n"
+
+    bot.send_message(user_id, f'{days[den_123]} \n<code>{mess}</code>', parse_mode=ParseMode.HTML)
+    bot.register_next_step_handler(message, )
+    # Закриваємо з'єднання з базою даних
+    cursor.close()
+    conn.close()
+
+
 
 
 
