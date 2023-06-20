@@ -7,6 +7,8 @@ import urllib.request
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 import time
+import os
+import openai
 
 import json
 
@@ -14,6 +16,11 @@ CHAT_ID = 628446966
 TELEGRAM_API_KEY = '5428270852:AAEbBDt8RiYgiizDEC7o5oTz4vl-x7Ls5ng'
 OPENAI_API_KEY = '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'
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
+
+
+
+
+
 
 
 def get_user_data(user_id):
@@ -574,6 +581,8 @@ def bot_message(message):
                 bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
                 message_handler_start(message)
 
+        elif message.text == 'я староста' or message.text == "Я староста":
+            bot.send_message(message.chat.id, "Ти піздюк, а не староста😏")
 
         elif message.text == 'Редагувати розклад':
             user_id = message.from_user.id
@@ -790,13 +799,16 @@ def redaguvanna(message,user_id):
         user_grypa = cursor.fetchone()[0]
         back = types.KeyboardButton('🔙Назад')
         key.add(back)
-        bot.send_message(message.chat.id, f"Ви вибрали {den}, будь ласка надішліть відредагований розкла.\nЗА ТАКИМ ЗРАЗКОМ!!!", reply_markup=key)#Продовження допиши як правильно вставляти
+        bot.send_message(message.chat.id, f"Ви вибрали {den}, будь ласка надішліть відредагований розкла.\nЗА ТАКИМ ЗРАЗКОМ!!!", reply_markup=key)
+        #Продовження допиши як правильно вставляти
+        bot.send_message(message.chat.id,'Напишіть назви пар відповідно до їх порядку, якщо у вас вікно тобто не має пари, то можете пропусти її нумерацію, або поставити прочерк')
         redaguvanna2(message, user_id, user_grypa, den)
 
 
 def redaguvanna2(message, user_id,user_grypa,den):
     days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця']
     den_123 = days.index(den)
+
     # Встановлюємо з'єднання з базою даних
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
@@ -804,16 +816,65 @@ def redaguvanna2(message, user_id,user_grypa,den):
     cursor.execute(f'SELECT * FROM rosklad_{user_grypa}')
     # Отримуємо результат запиту (перший рядок таблиці)
     first_row = cursor.fetchall()[den_123]
+
     mess = ''
     for j, item in enumerate(first_row):
         if item is not None:
             mess += f"{j + 1}. {item}\n"
 
-    bot.send_message(user_id, f'{days[den_123]} \n<code>{mess}</code>', parse_mode=ParseMode.HTML)
-    bot.register_next_step_handler(message, )
+    bot.send_message(user_id, f'\n<code>{mess}</code>', parse_mode=ParseMode.HTML)
+    bot.register_next_step_handler(message, redaguvanna3, user_grypa, user_id, den_123)
     # Закриваємо з'єднання з базою даних
     cursor.close()
     conn.close()
+
+def redaguvanna3(message, user_grypa, user_id, den_123):
+    text = message.text  # Отримуємо текст повідомлення
+    try:
+
+
+        # Розбиваємо текст на окремі рядки
+        lines = text.split('\n')
+
+        result = [None] * 5  # Результат (кортеж) з початковим значенням None
+
+        for line in lines:
+            # Розбиваємо рядок на індекс і значення
+            index, value = line.split('. ', 1)
+
+            # Перевіряємо, чи індекс є числом від 1 до 5
+            if index.isdigit() and 1 <= int(index) <= 5:
+                result[int(index) - 1] = value
+
+        # Виводимо результат (кортеж)
+        result = tuple(result)
+        bot.send_message(user_id, "Розклад успішно оновленно")
+        redaguvanna4(message, user_grypa, user_id, den_123, result )
+
+    except Exception as e:
+        bot.send_message(user_id, 'Ви ввели не по зразку, будь ласка надішліть мені ще раз відредагований розклад за зразком')
+        bot.send_message(user_id,'<code>1. (Назва пари)\n2. (Назва пари)\n3. (Назва пари)\n4. (Назва пари)\n5. (Назва пари)</code>', parse_mode=ParseMode.HTML)
+        bot.register_next_step_handler(message, redaguvanna3, user_grypa, user_id, den_123)
+
+
+
+
+def redaguvanna4(message, user_grypa, user_id, den_123, result):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f'SELECT * FROM rosklad_{user_grypa}')
+    rows = cursor.fetchall()
+
+    rows[den_123] = result
+    cursor.execute(f'DELETE FROM rosklad_{user_grypa}')
+    cursor.executemany(f'INSERT INTO rosklad_{user_grypa} VALUES (?,?,?,?,?)', rows)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    message_handler_start(message)
+
+
+
 
 
 
