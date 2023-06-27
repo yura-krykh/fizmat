@@ -52,8 +52,6 @@ def start(message: types.Message):
     cursor.execute(f"SELECT id FROM login_id WHERE id = {people_id} ")
     data = cursor.fetchone()
     if data is None:
-        user_name = message.chat.username
-        user_id = message.chat.id
 
         # Запит email
         bot.send_message(message.chat.id, "Будь ласка, введіть свою email адресу:")
@@ -61,84 +59,217 @@ def start(message: types.Message):
 
     else:
         bot.send_message(message.chat.id, "Ти вже зареєстрований!")
-
+        message_handler_start(message)
 
 def get_email(message: types.Message):
     email = message.text
-    if email == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
+    email = email.lower()
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute("SELECT email FROM login_id")
+    rows = cursor.fetchall()
+    emails = [row[0] for row in rows]  # Створення списку зі значень email
+
+    if email in emails:
+        bot.send_message(message.chat.id, "Користувач за такою електронною адресою вже зареєстрований введіть будь ласка свою адресу")
+        bot.register_next_step_handler(message, get_email)
+
+    elif email.startswith('/'):
         bot.send_message(message.chat.id, "Ви ввели команду а не пошту будь ласка введіть свою фізматівську пошту: ")
         bot.register_next_step_handler(message, get_email)
+
     else:
         conn = sqlite3.connect('users.db')
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM Email_Base WHERE Email_Address=?", (email,))
         row = cursor.fetchone()
         if row:
-            # Запит групи
-
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            item1 = types.KeyboardButton('СОФІ-11')
-            item2 = types.KeyboardButton('СОФА-12')
-            item3 = types.KeyboardButton('СОМІ-13')
-            item4 = types.KeyboardButton('КМ-14')
-            item5 = types.KeyboardButton('СОІМ-15')
-            item6 = types.KeyboardButton('ІІП-16')
-            item7 = types.KeyboardButton('DA-17')
-            item8 = types.KeyboardButton('СОФІ-21')
-            item9 = types.KeyboardButton('СОМІ-22')
-            item10 = types.KeyboardButton('СОІМ-23')
-            item11 = types.KeyboardButton('СОФА-25')
-            item12 = types.KeyboardButton('КН-26')
-            item13 = types.KeyboardButton('КН-27')
-            item14 = types.KeyboardButton('СОФІ-31')
-            item15 = types.KeyboardButton('СОМІ-32')
-            item16 = types.KeyboardButton('СОІМ-33')
-            item17 = types.KeyboardButton('СОФА-35')
-            item18 = types.KeyboardButton('КН-36')
-            item19 = types.KeyboardButton('СОФІ-41')
-            item20 = types.KeyboardButton('СОМІ-42')
-            item21 = types.KeyboardButton('СОIM-43')
-            item22 = types.KeyboardButton('СОІнск-24')
-            item23 = types.KeyboardButton('мСОФ-11')
-            item24 = types.KeyboardButton('мСОМ-12')
-            item25 = types.KeyboardButton('мСОІн-13')
-            item26 = types.KeyboardButton('мСОФ-21')
-            item27 = types.KeyboardButton('мСОМ-22')
-            item28 = types.KeyboardButton('мСОІн-23')
-            keyboard.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13,
-                         item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24,
-                         item25, item26, item27, item28)
-            bot.send_message(message.chat.id,
-                             "Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",
-                             reply_markup=keyboard)
-            bot.register_next_step_handler(message, get_group, email)
+            button_student = types.KeyboardButton("Студент")
+            button_starosta = types.KeyboardButton("Староста")
+            button_vikladach = types.KeyboardButton("Викладач")
+            keyboard.add(button_student, button_starosta, button_vikladach)
+            bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
+            bot.register_next_step_handler(message, get_role, email)
+
+
         else:
             # Email does not exist, send error message
             bot.send_message(message.chat.id,"Вашої пошти не знайдено в базі даних фізмату. Будь ласка, введіть свою пошту ще раз правильно.")
             # Return to the get_email function to wait for the next input from the user
             bot.register_next_step_handler(message, get_email)
-
         cursor.close()
         conn.close()
 
 
-def get_group(message: types.Message, email):
+
+def get_role(message, email):
+    role = message.text
+
+    if role.startswith('/'):
+        bot.send_message(message.chat.id,"Ви ввели команду, а не роль")
+        bot.register_next_step_handler(message, get_role, email)
+
+    elif role == 'Студент':
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('СОФІ-11')
+        item2 = types.KeyboardButton('СОФА-12')
+        item3 = types.KeyboardButton('СОМІ-13')
+        item4 = types.KeyboardButton('КМ-14')
+        item5 = types.KeyboardButton('СОІМ-15')
+        item6 = types.KeyboardButton('ІІП-16')
+        item7 = types.KeyboardButton('DA-17')
+        item8 = types.KeyboardButton('СОФІ-21')
+        item9 = types.KeyboardButton('СОМІ-22')
+        item10 = types.KeyboardButton('СОІМ-23')
+        item11 = types.KeyboardButton('СОФА-25')
+        item12 = types.KeyboardButton('КН-26')
+        item13 = types.KeyboardButton('КН-27')
+        item14 = types.KeyboardButton('СОФІ-31')
+        item15 = types.KeyboardButton('СОМІ-32')
+        item16 = types.KeyboardButton('СОІМ-33')
+        item17 = types.KeyboardButton('СОФА-35')
+        item18 = types.KeyboardButton('КН-36')
+        item19 = types.KeyboardButton('СОФІ-41')
+        item20 = types.KeyboardButton('СОМІ-42')
+        item21 = types.KeyboardButton('СОIM-43')
+        item22 = types.KeyboardButton('СОІнск-24')
+        item23 = types.KeyboardButton('мСОФ-11')
+        item24 = types.KeyboardButton('мСОМ-12')
+        item25 = types.KeyboardButton('мСОІн-13')
+        item26 = types.KeyboardButton('мСОФ-21')
+        item27 = types.KeyboardButton('мСОМ-22')
+        item28 = types.KeyboardButton('мСОІн-23')
+        keyboard.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13,
+                     item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24,
+                     item25, item26, item27, item28)
+        bot.send_message(message.chat.id,
+                         "Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",
+                         reply_markup=keyboard)
+        bot.register_next_step_handler(message, get_group_stud, email,role)
+
+
+
+
+
+    elif role == 'Викладач':
+        # Запит паролю для ролі викладача
+        bot.send_message(message.chat.id, "Будь ласка, введіть пароль для викладача:")
+        bot.register_next_step_handler(message, get_password,  role, email)
+
+    elif role == 'Староста':
+        # Запит паролю для ролі старости
+        bot.send_message(message.chat.id, "Будь ласка, введіть пароль для старости:")
+        bot.register_next_step_handler(message, get_password, role, email )
+
+    else:
+        # Надсилання повідомлення про неправильний вибір ролі
+        bot.send_message(message.chat.id, "Виберіть роль з наданих кнопок.")
+        bot.register_next_step_handler(message, get_role, email)
+
+
+def get_password(message, role, email):
+    password = message.text
+
+    if role == 'Викладач' and password == '000':
+        board = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('Математика📏')
+        item2 = types.KeyboardButton('Інформатика🧑‍💻')
+        item3 = types.KeyboardButton('Фізика👨‍🔬')
+        board.add(item1, item2, item3)
+        bot.send_message(message.chat.id, "Виберіть із якої ви кафедри:", reply_markup=board)
+        bot.register_next_step_handler(message, kafedra, email, role)
+
+    elif role == 'Староста' and password == '111':
+        # Встановлення ролі старости в базі даних
+
+
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('СОФІ-11')
+        item2 = types.KeyboardButton('СОФА-12')
+        item3 = types.KeyboardButton('СОМІ-13')
+        item4 = types.KeyboardButton('КМ-14')
+        item5 = types.KeyboardButton('СОІМ-15')
+        item6 = types.KeyboardButton('ІІП-16')
+        item7 = types.KeyboardButton('DA-17')
+        item8 = types.KeyboardButton('СОФІ-21')
+        item9 = types.KeyboardButton('СОМІ-22')
+        item10 = types.KeyboardButton('СОІМ-23')
+        item11 = types.KeyboardButton('СОФА-25')
+        item12 = types.KeyboardButton('КН-26')
+        item13 = types.KeyboardButton('КН-27')
+        item14 = types.KeyboardButton('СОФІ-31')
+        item15 = types.KeyboardButton('СОМІ-32')
+        item16 = types.KeyboardButton('СОІМ-33')
+        item17 = types.KeyboardButton('СОФА-35')
+        item18 = types.KeyboardButton('КН-36')
+        item19 = types.KeyboardButton('СОФІ-41')
+        item20 = types.KeyboardButton('СОМІ-42')
+        item21 = types.KeyboardButton('СОIM-43')
+        item22 = types.KeyboardButton('СОІнск-24')
+        item23 = types.KeyboardButton('мСОФ-11')
+        item24 = types.KeyboardButton('мСОМ-12')
+        item25 = types.KeyboardButton('мСОІн-13')
+        item26 = types.KeyboardButton('мСОФ-21')
+        item27 = types.KeyboardButton('мСОМ-22')
+        item28 = types.KeyboardButton('мСОІн-23')
+        keyboard.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13,
+                     item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24,
+                     item25, item26, item27, item28)
+        bot.send_message(message.chat.id,
+                         "Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",
+                         reply_markup=keyboard)
+        bot.register_next_step_handler(message, get_group_stud, email, role)
+
+
+
+
+    else:
+        # Надсилання повідомлення про неправильний пароль
+        bot.send_message(message.chat.id, "Неправильний пароль. Спробуйте ще раз.")
+        bot.register_next_step_handler(message, get_password, role, email)
+
+def kafedra(message, email, role):
+    group = message.text
+    if group not in ['Математика📏', 'Інформатика🧑‍💻', 'Фізика👨‍🔬']:
+        bot.send_message(message.chat.id, "Ви що з хімбіо?🤨")
+        bot.register_next_step_handler(message, kafedra, message, email, role)
+
+    elif group.startswith('/'):
+        bot.send_message(message.chat.id, "Будь ласка будьте уважніші ви ввели команду, а не назву кафедри, будь ласка введіть свою кафедру😡 ")
+        bot.register_next_step_handler(message, kafedra, email, role)
+    else:
+        bot.send_message(message.chat.id, 'Будь ласка надішліть своє повне прізвище ім\'я по-батькові')
+        if group == 'Математика📏':
+            group = "Математик"
+        elif group == 'Інформатика🧑‍💻':
+            group = 'Інформатик'
+        elif group == 'Фізика👨‍🔬':
+            group = 'Фізик'
+        bot.register_next_step_handler(message, get_first_last, email, role, group)
+
+def get_group_stud(message,email,role):
     group = message.text
     if group not in ['СОМІ-32', 'СОІМ-33', 'СОФА-35', 'КН-36', 'мСОФ-11', 'мСОМ-12', 'СОФІ-41', 'СОМІ-42', 'СОIM-43',
                      'СОІнск-24', 'мСОІн-13', 'КМ-14', 'СОІМ-15', 'ІІП-16', 'DA-17', 'СОФІ-21', 'СОФІ-21', 'СОМІ-22',
                      'КН-26',
-                     'КН-27', 'СОФІ-31', 'СОІМ-23', 'СОФА-25', 'СОФІ-11', 'СОФА-12', 'СОМІ-13','мСОФ-21','мСОМ-22','мСОІн-23']:
-        bot.send_message(message.chat.id,"Ви ввели не правильну групу виберіть ще раз свою групу:")
-        bot.register_next_step_handler(message, get_group, email)
-    elif email == "/start" or email == "/menu" or email == '/support' or email == '/homework' or email == '/idea' or email == '/shurik' or email == '/legion':
+                     'КН-27', 'СОФІ-31', 'СОІМ-23', 'СОФА-25', 'СОФІ-11', 'СОФА-12', 'СОМІ-13', 'мСОФ-21', 'мСОМ-22',
+                     'мСОІн-23']:
+        bot.send_message(message.chat.id, "Ви ввели не правильну групу виберіть ще раз свою групу:")
+        bot.register_next_step_handler(message, get_group_stud, email, role)
+    elif group.startswith('/'):
         bot.send_message(message.chat.id, "Будь ласка будьте уважніші ви ввели команду а не назву групи, будь ласка введіть свою групу😡 ")
-        bot.register_next_step_handler(message, get_group, email)
+        bot.register_next_step_handler(message, get_group_stud, email,role)
     else:
         group = message.text.upper().replace('-', '_')
         bot.send_message(message.chat.id, "Будь ласка, введіть своє ПІБ:")
-        bot.register_next_step_handler(message, get_first_last, email, group)
-def get_first_last(message: types.Message, email, group):
+        bot.register_next_step_handler(message, get_first_last, email, role, group)
+
+
+def get_first_last(message, email, role, group):
     first_last = message.text
+    role = role.lower()
+    email = email.lower()
 
     connect = sqlite3.connect('users.db')
     cursor = connect.cursor()
@@ -147,80 +278,14 @@ def get_first_last(message: types.Message, email, group):
     user_name = message.chat.username
 
     # Вставка даних в базу даних
-    cursor.execute("INSERT INTO login_id (id, username, email, grypa, first_last) VALUES(?, ?, ?, ?, ?);",
-                   (user_id, user_name, email, group, first_last))
+    cursor.execute("INSERT INTO login_id (id, username, email, grypa, first_last, roli) VALUES(?, ?, ?, ?, ?, ?);",
+                   (user_id, user_name, email, group, first_last, role))
     connect.commit()
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    button_student = types.KeyboardButton("Студент")
-    button_starosta = types.KeyboardButton("Староста")
-    button_vikladach = types.KeyboardButton("Викладач")
-    keyboard.add(button_student, button_starosta, button_vikladach)
-    bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
-    bot.register_next_step_handler(message, get_role, email, group, first_last)
+    bot.send_message(message.chat.id, "Успішна реєстрація")
+    create_group_tables(message)
 
 
-def get_role(message: types.Message, email, group, first_last):
-    role = message.text
-
-    if role == 'Студент':
-        # Встановлення ролі студента в базі даних
-        connect = sqlite3.connect('users.db')
-        cursor = connect.cursor()
-        cursor.execute("UPDATE login_id SET roli = ? WHERE id = ?;", ('студент', message.chat.id))
-        connect.commit()
-
-        bot.send_message(message.chat.id, f"Ви зареєстровані як студент!") 
-        create_group_tables()
-        message_handler_start(message)
-
-    elif role == 'Викладач':
-        # Запит паролю для ролі викладача
-        bot.send_message(message.chat.id, "Будь ласка, введіть пароль для викладача:")
-        bot.register_next_step_handler(message, get_password, 'викладач', email, group, first_last)
-
-    elif role == 'Староста':
-        # Запит паролю для ролі старости
-        bot.send_message(message.chat.id, "Будь ласка, введіть пароль для старости:")
-        bot.register_next_step_handler(message, get_password, 'староста', email, group, first_last)
-
-    else:
-        # Надсилання повідомлення про неправильний вибір ролі
-        bot.send_message(message.chat.id, "Виберіть роль з наданих кнопок.")
-        bot.register_next_step_handler(message, get_role, email, group, first_last)
-
-
-def get_password(message: types.Message, role, email, group, first_last):
-    password = message.text
-
-    if role == 'викладач' and password == '000':
-        # Встановлення ролі викладача в базі даних
-        connect = sqlite3.connect('users.db')
-        cursor = connect.cursor()
-        cursor.execute("UPDATE login_id SET roli = ? WHERE id =?;", ('викладач', message.chat.id))
-        connect.commit()
-        bot.send_message(message.chat.id, f"Ви зареєстровані як викладач!")
-        create_group_tables()
-        message_handler_start(message)
-    elif role == 'староста' and password == '111':
-        # Встановлення ролі старости в базі даних
-        connect = sqlite3.connect('users.db')
-        cursor = connect.cursor()
-        cursor.execute("UPDATE login_id SET roli = ? WHERE id = ?;", ('староста', message.chat.id))
-        connect.commit()
-
-        bot.send_message(message.chat.id, f"Ви зареєстровані як староста!")
-        create_group_tables()
-
-        message_handler_start(message)
-
-
-
-    else:
-        # Надсилання повідомлення про неправильний пароль
-        bot.send_message(message.chat.id, "Неправильний пароль. Спробуйте ще раз.")
-        bot.register_next_step_handler(message, get_password, role, email, group, first_last)
-
-def create_group_tables():
+def create_group_tables(message):
     # Встановлення з'єднання з базою даних
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
@@ -234,10 +299,10 @@ def create_group_tables():
         cursor.execute(
             f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT , photo BLOB, file BLOB)")
     conn.close()
-    create_user_tables()
+    create_user_tables(message)
 
 
-def create_user_tables():
+def create_user_tables(message):
     # підключення до бази даних
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
@@ -251,22 +316,42 @@ def create_user_tables():
         cursor.execute(
             f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT , photo BLOB, file BLOB, actual TEXT)")
     conn.close()
-    create_rozklad_table()
+    create_rozklad_table(message)
 
-def create_rozklad_table():
+def create_rozklad_table(message):
     # Встановлення з'єднання з базою даних
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
     # Отримання унікальних груп з бази даних
-    cursor.execute("SELECT DISTINCT grypa FROM login_id")
-    groups = cursor.fetchall()
+    groups = ['СОМІ-32', 'СОІМ-33', 'СОФА-35', 'КН-36', 'мСОФ-11', 'мСОМ-12', 'СОФІ-41', 'СОМІ-42', 'СОIM-43',
+              'СОІнск-24', 'мСОІн-13', 'КМ-14', 'СОІМ-15', 'ІІП-16', 'DA-17', 'СОФІ-21', 'СОФІ-21', 'СОМІ-22',
+              'КН-26', 'КН-27', 'СОФІ-31', 'СОІМ-23', 'СОФА-25', 'СОФІ-11', 'СОФА-12', 'СОМІ-13', 'мСОФ-21', 'мСОМ-22',
+              'мСОІн-23']
+
     # Створення таблиць для кожної групи
     for group in groups:
-        group_name = group[0].replace("-", "_")
-        table_name = f"{group_name}"
-        cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS rosklad_{table_name} (Понеділок TEXT, Вівторок TEXT , Середа TEXT, Четвер TEXT, Пятниця TEXT)")
-    conn.close()
+        table_name = f"rosklad_{group.replace('-', '_')}"
+        # Перевірка наявності таблиці
+        cursor.execute(f"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+        result = cursor.fetchone()
+        if result[0] == 0:
+            # Створення таблиці, якщо вона не існує
+            cursor.execute(
+                f"CREATE TABLE {table_name} (Перша TEXT, друга TEXT, третя TEXT, четверта TEXT, пята TEXT)")
+            # Додавання значення "пара ще не вказана" у всі стовпці таблиці
+            cursor.execute(
+                f"INSERT INTO {table_name} (Перша, друга, третя, четверта, пята) VALUES ('пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана')")
+            cursor.execute(
+                f"INSERT INTO {table_name} (Перша, друга, третя, четверта, пята) VALUES ('пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана')")
+            cursor.execute(
+                f"INSERT INTO {table_name} (Перша, друга, третя, четверта, пята) VALUES ('пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана')")
+            cursor.execute(
+                f"INSERT INTO {table_name} (Перша, друга, третя, четверта, пята) VALUES ('пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана', 'пара ще не вказана')")
+
+    connect.commit()  # Застосовуємо зміни до бази даних
+    cursor.close()
+    connect.close()
+    message_handler_start(message)
 
 
 
@@ -550,11 +635,13 @@ def message_handler_start(message):
     item2 = types.KeyboardButton('✍️Розклад пар')
     item3 = types.KeyboardButton('Контакти викладачів')
     item4 = types.KeyboardButton('Журнал')
-    item5 = types.KeyboardButton('Інформація про розробників')
+    item5 = types.KeyboardButton('Старостам')
     item6 = types.KeyboardButton('Домашка')
-    item_menu = types.KeyboardButton('Старостам')
+    item_menu = types.KeyboardButton('Інформація про розробників')
+    item5_6 = types.KeyboardButton('Підтримка проекту')
     markup.add(item1, item2, item3, item4, item5,item6)
     markup.add(item_menu)
+    markup.add(item5_6)
     bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
 
 
@@ -562,8 +649,26 @@ def message_handler_start(message):
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
+
         if message.text == 'Інформація про розробників':
             bot.send_message(message.chat.id, 'Засновник @yura_krykh\nВведіть команду /support якшо виникли проблеми')
+
+        elif message.text == 'Підтримка проекту':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            info = types.KeyboardButton('Інформація про підтримку')
+            info2 = types.KeyboardButton('Донатик')
+            back = types.KeyboardButton('🔙Назад')
+            markup.add(info)
+            markup.add(info2)
+            markup.add(back)
+            bot.send_message(message.chat.id, "Будемо раді, якщо ви підтримаєте проект🥹", reply_markup=markup)
+
+        elif message.text == 'Інформація про підтримку':
+            bot.send_message(message.chat.id, "Привіт, ми збираємо суму для оренди сервера, на якому буде встановлений наш бот, памʼятайте донат не є обов'язковим, але це сильно допоможе полегшити завдання розробникам та підтримати нашу працю, дякуємо всім, ну і звісно нагадуємо що маленьких донатів не буває)")
+
+        elif message.text == 'Донатик':
+            bot.send_message(message.chat.id, "Посилання на банку\nhttps://send.monobank.ua/jar/9qjTL2dtrB\nНомер картки банки\n5375 4112 0659 5113")
+
         elif message.text == 'Старостам':
             user_id = message.from_user.id
             conn = sqlite3.connect('users.db')
@@ -608,6 +713,7 @@ def bot_message(message):
                 else:
                     bot.send_message(message.chat.id, "Ви не є старостою, ви не можете користуватися цим меню)")
                     message_handler_start(message)
+
         elif message.text == 'Домашка':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             item1 = types.KeyboardButton('Перегляд домашки')
@@ -617,9 +723,6 @@ def bot_message(message):
             markup.add(item2)
             markup.add(item3)
             bot.send_message(message.chat.id, 'Виберіть:', reply_markup=markup)
-
-
-
 
         elif message.text == 'Перегляд домашки':
             conn = sqlite3.connect('users.db')
@@ -638,9 +741,8 @@ def bot_message(message):
                     bot.send_message(message.chat.id, caption)
             conn.close()
 
-
-
-
+        elif message.text == 'Журнал':
+            jurnal1(message)
 
         elif message.text == 'Відмітити виконане дз':
             conn = sqlite3.connect('users.db')
@@ -665,18 +767,9 @@ def bot_message(message):
                 # закриваємо з'єднання з базою даних
             conn.close()
 
-
-
-
-
         elif message.text == '✍️Розклад пар':
             user_id = message.chat.id
             rozklad_par_0(message, user_id)
-
-
-
-
-
 
         elif message.text == '📜Профіль':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -691,6 +784,7 @@ def bot_message(message):
                 bot.send_message(message.chat.id, profile_info, reply_markup=markup)
             else:
                 bot.send_message(message.chat.id, "Вас не знайдено(\nЗвернись до /support!")
+
         elif message.text == '🔧Редагувати профіль':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             up_email = types.KeyboardButton('🛠📨Email')
@@ -700,13 +794,10 @@ def bot_message(message):
             markup.add(up_email, up_grypa, up_firstlast, back)
             bot.send_message(message.chat.id, "Виберіть, що саме хочете редагувати?🧐", reply_markup=markup)
 
-
-
         elif message.text == '🛠📨Email':
 
             bot.send_message(message.chat.id, "Введіть фізматівську пошту:")
             bot.register_next_step_handler(message, update_email)
-
 
         elif message.text == '🛠👥Групу':
             keyboard2 = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -745,15 +836,9 @@ def bot_message(message):
             bot.send_message(message.chat.id, "Виберіть нову групу:", reply_markup=keyboard2)
             bot.register_next_step_handler(message, update_grypa)
 
-
         elif message.text == "🛠🪪ПІБ":
             bot.send_message(message.chat.id, "Введіть нове ПІБ:")
             bot.register_next_step_handler(message, update_first_last)
-
-
-        elif message.text == 'Журнал':
-            bot.send_message(message.chat.id, "Ця функція покищо недоступна")
-
 
         elif message.text == 'Контакти викладачів':
             conn = sqlite3.connect('users.db')
@@ -782,7 +867,170 @@ def bot_message(message):
             message_handler_start(message)
 
 
+def jurnal1(message):
+    user_id = message.chat.id
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
+    user_grypa = cursor.fetchone()[0]
+    user_grypa = user_grypa.upper().replace('_', '-')
 
+    db_filename = user_grypa + '.db'
+    if os.path.exists(db_filename):                 #1_1234
+        bot.send_message(message.chat.id,f"Вашу групу {user_grypa} знайдено.")
+    else:                                           #2_1234
+        bot.send_message(message.chat.id,f"Давайте я допоможу вам створити журнал для вашої групи {user_grypa}",reply_markup=telebot.types.ReplyKeyboardRemove())
+        jurnal2_1(message, user_grypa)
+
+def jurnal2_1(message, user_grypa):
+    # Створення бази даних з назвою групи
+    conn = sqlite3.connect(f"{user_grypa}.db")
+    cursor = conn.cursor()
+
+    # Створення таблиці STUDENTY
+    cursor.execute("CREATE TABLE IF NOT EXISTS STUDENTY (Студенти TEXT)")
+
+    # Створення таблиці Предмети
+    cursor.execute("CREATE TABLE IF NOT EXISTS Предмети (Предмети TEXT, Закритий_модуль_1 TEXT, Закритий_модуль_2 TEXT)")
+
+    # Збереження змін до бази даних
+    conn.commit()
+
+    # Закриття підключення до бази даних
+    conn.close()
+    bot.send_message(message.chat.id, "Будь ласка, надішліть мені список студентів вашої групи за таким зразком", reply_markup=None)
+    bot.send_message(message.chat.id, "Прізвище ім'я по-батькові\nПрізвище ім'я по-батькові\nПрізвище ім'я по-батькові\nПрізвище ім'я по-батькові\nПрізвище ім'я по-батькові")
+    bot.register_next_step_handler(message, jurnal2_2, user_grypa)
+
+def jurnal2_2(message, user_grypa):
+    text = message.text
+    # Видаляємо цифри з тексту
+    text = ''.join(filter(lambda x: not x.isdigit(), text))
+
+    # Знаки, які ми хочемо видалити
+    characters_to_remove = '().-:;,+#*$&?!`~"'
+
+    # Видаляємо знаки з тексту
+    for char in characters_to_remove:
+        text = text.replace(char, '')
+
+    jurnal2_3(message, user_grypa,text)
+def jurnal2_3(message,user_grypa,text):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Так все вірно')
+    item2 = types.KeyboardButton('Редагувати список')
+    markup.add(item1)
+    markup.add(item2)
+    bot.send_message(message.chat.id, "Будь ласка, перевірте чи ви правильно надіслали мені список своїх одногрупників".format(message.from_user), reply_markup=markup)
+    bot.register_next_step_handler(message,jurnal2_4,user_grypa,text)
+def jurnal2_4(message,user_grypa,text):
+    vid = message.text
+
+
+    if vid == 'Так все вірно':
+
+        bot.send_message(message.chat.id, "Вношу в базу...", reply_markup=telebot.types.ReplyKeyboardRemove())
+        time.sleep(2)
+        jurnal2_5(message, user_grypa, text)
+
+    elif vid == 'Редагувати список':
+        jurnal2_1(message, user_grypa)
+
+    #Виводимо результат в консоль
+
+
+
+
+
+def jurnal2_5(message,user_grypa,text):
+    conn = sqlite3.connect(f"{user_grypa}.db")
+    cursor = conn.cursor()
+
+    rows = text.split('\n')  # Розділяємо текст на рядки
+
+    # Видаляємо порожні рядки та сортуємо рядки за алфавітом
+    rows = [row.strip() for row in rows if row.strip()]
+    rows.sort()
+
+    for row in rows:
+        cursor.execute("INSERT INTO STUDENTY (Студенти) VALUES (?)", (row,))
+
+    conn.commit()
+    bot.send_message(message.chat.id, "Збережено✅")
+    bot.send_message(message.chat.id, "А тепер перейдемо до створення журналу предметів, надішліть мені будь ласка ЧЕРЕЗ КОМУ повні назви своїх навчальних дисциплін цього семестру.\nНадсилати ПІП викладачів, які ведуть у вас цей предмет, не потрібно🫠")
+    bot.register_next_step_handler(message, jurnal2_6, user_grypa)
+def jurnal2_6(message,user_grypa):
+    pred = message.text
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Так все вірно')
+    item2 = types.KeyboardButton('Редагувати')
+    markup.add(item1)
+    markup.add(item2)
+    bot.send_message(message.chat.id, "Перевірте чи ви правильно надіслали усі навчальні дисципліни", reply_markup=markup)
+    bot.send_message(message.chat.id, f"<code>{pred}</code>", parse_mode=ParseMode.HTML)
+    bot.register_next_step_handler(message, jurnal2_7 ,user_grypa, pred)
+
+def jurnal2_7(message,user_grypa, pred):
+    vid = message.text
+
+    if vid == 'Так все вірно':
+
+        bot.send_message(message.chat.id, "Зберігаю ваші предмети...", reply_markup=telebot.types.ReplyKeyboardRemove())
+        time.sleep(2)
+        jurnal2_8(message, user_grypa, pred)
+
+
+    elif vid == 'Редагувати':
+        bot.send_message(message.chat.id,"Будь ласка надішліть мені ще раз ваші навчальні дисципліни і переконайтеся чи все вірно)", reply_markup=telebot.types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(message,jurnal2_6, user_grypa)
+
+
+def jurnal2_8(message,user_grypa, pred):
+    subjects = pred.split(', ')  # Розділяємо рядок за комами
+
+    conn = sqlite3.connect(f"{user_grypa}.db")
+    cursor = conn.cursor()
+
+    for subject in subjects:
+        cursor.execute("INSERT INTO Предмети (Предмети) VALUES (?)", (subject,))
+
+    conn.commit()
+    bot.send_message(message.chat.id, "Створюю таблиці з вашими предметами...")
+    jurnal2_9(message, user_grypa)
+
+#тепер напиши мені функцію jurnal2_9 яка буде створювати
+
+def jurnal2_9(message,user_grypa):
+
+    conn = sqlite3.connect(f"{user_grypa}.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT Предмети FROM Предмети")
+    result = cursor.fetchall()
+    result = [(item[0].replace(" ", "_"),) for item in result]
+
+    cursor.execute("SELECT Студенти FROM STUDENTY")
+    students = cursor.fetchall()
+
+    for row in result:
+        pre = row[0]
+        cursor.execute(
+            f'CREATE TABLE "{pre}_1" ("Студенти" TEXT, [модуль 1] INTEGER, [тема 0] INTEGER, [тема 1] INTEGER, [тема 2] INTEGER, [тема 3] INTEGER, [тема 4] INTEGER, [тема 5] INTEGER, [тема 6] INTEGER, [тема 7] INTEGER, [тема 8] INTEGER, [тема 9] INTEGER)'
+        )
+        cursor.execute(
+            f'CREATE TABLE "{pre}_2" ("Студенти" TEXT, [модуль 2] INTEGER, [тема 0] INTEGER, [тема 1] INTEGER, [тема 2] INTEGER, [тема 3] INTEGER, [тема 4] INTEGER, [тема 5] INTEGER, [тема 6] INTEGER, [тема 7] INTEGER, [тема 8] INTEGER, [тема 9] INTEGER)'
+        )
+        cursor.execute(
+            f'CREATE TABLE "{pre}_3" ("Студенти" TEXT, [модуль 1] INTEGER, [модуль 2] INTEGER, [індз] INTEGER, [підсумковий контроль] INTEGER, [загальна кількість балів] INTEGER)'
+        )
+
+        for student in students:
+            cursor.execute(f"INSERT INTO \"{pre}_1\" (\"Студенти\") VALUES (?)", (str(student[0]),))
+            cursor.execute(f"INSERT INTO \"{pre}_2\" (\"Студенти\") VALUES (?)", (str(student[0]),))
+            cursor.execute(f"INSERT INTO \"{pre}_3\" (\"Студенти\") VALUES (?)", (str(student[0]),))
+
+    conn.commit()
+    conn.close()
+    bot.send_message(message.chat.id, "Таблиці успішно створенні✅")
 
 def redaguvanna(message,user_id):
     den = message.text
@@ -856,15 +1104,11 @@ def redaguvanna3(message, user_grypa, user_id, den_123):
         bot.send_message(user_id,'<code>1. (Назва пари)\n2. (Назва пари)\n3. (Назва пари)\n4. (Назва пари)\n5. (Назва пари)</code>', parse_mode=ParseMode.HTML)
         bot.register_next_step_handler(message, redaguvanna3, user_grypa, user_id, den_123)
 
-
-
-
 def redaguvanna4(message, user_grypa, user_id, den_123, result):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute(f'SELECT * FROM rosklad_{user_grypa}')
     rows = cursor.fetchall()
-
     rows[den_123] = result
     cursor.execute(f'DELETE FROM rosklad_{user_grypa}')
     cursor.executemany(f'INSERT INTO rosklad_{user_grypa} VALUES (?,?,?,?,?)', rows)
@@ -872,16 +1116,6 @@ def redaguvanna4(message, user_grypa, user_id, den_123, result):
     cursor.close()
     conn.close()
     message_handler_start(message)
-
-
-
-
-
-
-
-
-
-
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
@@ -957,8 +1191,6 @@ def rozklad_par(message,user_id):
         bot.send_message(message.chat.id, "✅")
         rozklad_par2(message, data, user_id)
 
-
-
 def rozklad_par2(message,data,user_id):
 
     connect = sqlite3.connect('users.db')
@@ -977,15 +1209,6 @@ def rozklad_par2(message,data,user_id):
 
     bot.send_message(user_id,"Розклад пар для групи " + data.replace('_', '-') + ':\n\n' + mess)
     bot.register_next_step_handler(message, rozklad_par,user_id )
-
-
-
-
-
-
-
-
-
 
 
 def update_email(message):
@@ -1019,8 +1242,6 @@ def update_email(message):
 
             bot.register_next_step_handler(message, update_email)
 
-
-
 def update_grypa(message):
     new_grypa = message.text.upper().replace('-', '_')
     user_id = message.from_user.id
@@ -1044,13 +1265,6 @@ def update_grypa(message):
     else:
         bot.send_message(message.chat.id, "Ви ввели щось не зрозуміле мені, напевно це не група(")
         bot.register_next_step_handler(message, update_grypa)
-
-
-
-
-
-
-
 
 def update_first_last(message):
     new_first_last = message.text
