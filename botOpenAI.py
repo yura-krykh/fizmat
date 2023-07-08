@@ -6,12 +6,13 @@ import datetime
 import urllib.request
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import ReplyKeyboardMarkup, KeyboardButton
-import time
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 import os
 import openai
-
+from telebot import TeleBot
+import urllib.request
+import time
 import json
-
 CHAT_ID = 628446966
 TELEGRAM_API_KEY = '5428270852:AAEbBDt8RiYgiizDEC7o5oTz4vl-x7Ls5ng'
 OPENAI_API_KEY = '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'
@@ -282,40 +283,6 @@ def get_first_last(message, email, role, group):
                    (user_id, user_name, email, group, first_last, role))
     connect.commit()
     bot.send_message(message.chat.id, "Успішна реєстрація")
-    create_group_tables(message)
-
-
-def create_group_tables(message):
-    # Встановлення з'єднання з базою даних
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    # Отримання унікальних груп з бази даних
-    cursor.execute("SELECT DISTINCT grypa FROM login_id")
-    groups = cursor.fetchall()
-    # Створення таблиць для кожної групи
-    for group in groups:
-        group_name = group[0].replace("-", "_")
-        table_name = f"{group_name}"
-        cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT , photo BLOB, file BLOB)")
-    conn.close()
-    create_user_tables(message)
-
-
-def create_user_tables(message):
-    # підключення до бази даних
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    # отримання унікальних ідентифікаторів користувачів з таблиці login_id
-    cursor.execute("SELECT DISTINCT id FROM login_id")
-    users = cursor.fetchall()
-    # створення таблиць для кожного користувача
-    for user in users:
-        user_id = user[0]
-        table_name = f"table_{user_id}"
-        cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {table_name} (subject TEXT, text TEXT , photo BLOB, file BLOB, actual TEXT)")
-    conn.close()
     create_rozklad_table(message)
 
 def create_rozklad_table(message):
@@ -611,9 +578,8 @@ def get_all_users():
 def menu_starostam(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton('Редагувати розклад')
-    item2 = types.KeyboardButton('Додати оцінки?')
+    item2 = types.KeyboardButton('Робота з журналом')
     homework = types.KeyboardButton('Додати домашку')
-    item3 = types.KeyboardButton('Редагувати домашку')
     item4 = types.KeyboardButton('Оголошення для групи')
     back = types.KeyboardButton('🔙Назад')
 
@@ -621,7 +587,6 @@ def menu_starostam(message):
     markup.add(item1)
     markup.add(item2)
     markup.add(homework)
-    markup.add(item3)
     markup.add(item4)
     bot.send_message(message.chat.id, "Це меню призначене спеціально для старост, і ви можете ознайомитися зі списком майбутніх функцій, які будуть додані😌".format(message.from_user), reply_markup=markup)
 
@@ -634,12 +599,11 @@ def message_handler_start(message):
     item1 = types.KeyboardButton('📜Профіль')
     item2 = types.KeyboardButton('✍️Розклад пар')
     item3 = types.KeyboardButton('Контакти викладачів')
-    item4 = types.KeyboardButton('Журнал')
-    item5 = types.KeyboardButton('Старостам')
-    item6 = types.KeyboardButton('Домашка')
+    item4 = types.KeyboardButton('Старостам')
+    item5 = types.KeyboardButton('Домашка')
     item_menu = types.KeyboardButton('Інформація про розробників')
     item5_6 = types.KeyboardButton('Підтримка проекту')
-    markup.add(item1, item2, item3, item4, item5,item6)
+    markup.add(item1, item2, item3, item4, item5)
     markup.add(item_menu)
     markup.add(item5_6)
     bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
@@ -668,6 +632,24 @@ def bot_message(message):
 
         elif message.text == 'Донатик':
             bot.send_message(message.chat.id, "Посилання на банку\nhttps://send.monobank.ua/jar/9qjTL2dtrB\nНомер картки банки\n5375 4112 0659 5113")
+
+        elif message.text == 'Додати домашку':
+            user_id = message.from_user.id
+            conn = sqlite3.connect('users.db')
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+            user_rol = cursor.fetchone()
+            if user_rol:
+                user_rol = user_rol[0]
+                if user_rol == 'староста':
+                    homework(message)
+                else:
+                    bot.send_message(message.chat.id, "Ви не є старостою, ви не можете користуватися цим меню)")
+                    message_handler_start(message)
+            else:
+                bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
+                message_handler_start(message)
+
 
         elif message.text == 'Старостам':
             user_id = message.from_user.id
@@ -740,9 +722,6 @@ def bot_message(message):
                     caption = f"Предмет: {subject}\nПояснення: {text}"
                     bot.send_message(message.chat.id, caption)
             conn.close()
-
-        elif message.text == 'Журнал':
-            jurnal1(message)
 
         elif message.text == 'Відмітити виконане дз':
             conn = sqlite3.connect('users.db')
@@ -863,8 +842,153 @@ def bot_message(message):
             conn.close()
             bot.send_message(message.chat.id, "Оберіть викладача за прізвищем якого шукаєте:",reply_markup=reply_markup)
 
+        elif message.text == "Робота з журналом":
+            user_id = message.from_user.id
+            conn = sqlite3.connect('users.db')
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+            user_rol = cursor.fetchone()
+            if user_rol:
+                user_rol = user_rol[0]
+                if user_rol == 'староста':
+                    jurnal1(message)
+                else:
+                    bot.send_message(message.chat.id, "Ви не є старостою, ви не можете користуватися цим меню)")
+                    message_handler_start(message)
+            else:
+                bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
+                message_handler_start(message)
+
+
         elif message.text == '🔙Назад':
             message_handler_start(message)
+
+
+
+def homework(message):
+    user_id = message.chat.id
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
+    user_grypa = cursor.fetchone()[0]
+    user_grypa = user_grypa.upper().replace('_', '-')
+
+    db_filename = user_grypa + '_DOMASHKA.db'
+    if os.path.exists(db_filename):  # 1_1234
+        bot.send_message(message.chat.id, f"Оберіть з якого предмету хочете задати дошнє завдання для своєї групи {user_grypa}")
+
+
+    else:  # 2_1234
+        bot.send_message(message.chat.id, f"Таблиці із домашніми завданнями для твоєї групи {user_grypa} ще не створенно, давай я тобі допоможу їх створити🧑‍💻", reply_markup=telebot.types.ReplyKeyboardRemove())
+        homework2_1(message,user_grypa)
+
+
+def homework2_1(message,user_grypa):
+    # Створення бази даних з назвою групи
+    conn = sqlite3.connect(f"{user_grypa}_DOMASHKA.db")
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS Предмети (Предмети TEXT)")
+    conn.commit()
+    conn.close()
+
+    db_filename = user_grypa + '.db'
+    if os.path.exists(db_filename):
+        conn1 = sqlite3.connect(f"{user_grypa}.db")
+        cursor2 = conn1.cursor()
+        cursor2.execute("SELECT Предмети FROM Предмети")
+        results = cursor2.fetchall()
+        subjects = [row[0] for row in results]
+        sub = ", ".join(subjects)
+        conn1.close()
+        bot.send_message(message.chat.id,f"Ви можете використати ось ці навчальні дисципліни із журналу з оцінками\n\n<code>{sub}</code>\n\nНадішліть через кому)))",parse_mode=ParseMode.HTML)
+        bot.register_next_step_handler(message, homework2_2, user_grypa)
+
+    else:
+        bot.send_message(message.chat.id, "Будь ласка надішліть мені всі свої навчальні дисципліни за таким зразком\n\n<code>Алгебра, Фізика, Інформатика, Іноземна мова, Фізра, Українська мова</code>\n\nТобто через кому))", parse_mode=ParseMode.HTML)
+        bot.register_next_step_handler(message, homework2_2, user_grypa)
+
+def homework2_2(message,user_grypa):
+    predmety = message.text
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Так все вірно')
+    item2 = types.KeyboardButton('Редагувати')
+    markup.add(item1)
+    markup.add(item2)
+    bot.send_message(message.chat.id, "Перевірте чи ви правильно надіслали усі навчальні дисципліни",reply_markup=markup)
+    bot.send_message(message.chat.id, f"<code>{predmety}</code>", parse_mode=ParseMode.HTML)
+    bot.register_next_step_handler(message,homework2_3,user_grypa,predmety)
+    
+def homework2_3(message, user_grypa,predmety):
+    vidpovid = message.text
+
+    if vidpovid == 'Так все вірно':
+
+        bot.send_message(message.chat.id, "Зберігаю ваші предмети...", reply_markup=telebot.types.ReplyKeyboardRemove())
+        time.sleep(2)
+        homework2_4(message,user_grypa,predmety)
+
+    elif vidpovid == 'Редагувати':
+        bot.send_message(message.chat.id,"Будь ласка надішліть мені ще раз ваші навчальні дисципліни і переконайтеся чи все вірно)", reply_markup=telebot.types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(message, homework2_2, user_grypa)
+
+
+def homework2_4(message, user_grypa,predmety):
+    subjects = predmety.split(', ')  # Розділяємо рядок за комами
+
+    conn = sqlite3.connect(f"{user_grypa}_DOMASHKA.db")
+    cursor = conn.cursor()
+
+    for subject in subjects:
+        cursor.execute("INSERT INTO Предмети (Предмети) VALUES (?)", (subject,))
+
+    conn.commit()
+    bot.send_message(message.chat.id, "Створюю таблиці з вашими предметами...")
+    time.sleep(2)
+    homework2_5(message, user_grypa)
+
+def homework2_5(message, user_grypa):
+    conn = sqlite3.connect(f"{user_grypa}_DOMASHKA.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT Предмети FROM Предмети")
+    result = cursor.fetchall()
+    result = [(item[0].replace(" ", "_"),) for item in result]
+    for row in result:
+        pre = row[0]
+        cursor.execute(
+            f'CREATE TABLE "{pre}" ("id" TEXT, username TEXT)'
+        )
+        cursor.execute(
+            f'CREATE TABLE "{pre}_dz" ("Завдання" TEXT, ФОТО_1 BLOB, ФОТО_2 BLOB, ФОТО_3 BLOB, ФАЙЛ_1 BLOB, ФАЙЛ_2 BLOB, ФАЙЛ_3 BLOB, КОЛИ_ЗАДАНО TEXT, ДОКИ_АКТУАЛЬНА TEXT, ДАТА_ВИДАЛЕННЯ TEXT)'
+        )
+    bot.send_message(message.chat.id, "Все готово")
+    message_handler_start(message)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def jurnal1(message):
@@ -877,10 +1001,190 @@ def jurnal1(message):
 
     db_filename = user_grypa + '.db'
     if os.path.exists(db_filename):                 #1_1234
-        bot.send_message(message.chat.id,f"Вашу групу {user_grypa} знайдено.")
+        bot.send_message(message.chat.id,f"Журнал групи {user_grypa} вже створений.")
+        jurnal1_1(message)
+
     else:                                           #2_1234
         bot.send_message(message.chat.id,f"Давайте я допоможу вам створити журнал для вашої групи {user_grypa}",reply_markup=telebot.types.ReplyKeyboardRemove())
         jurnal2_1(message, user_grypa)
+
+
+
+def jurnal1_1(message):
+    user_id = message.chat.id
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
+    user_grypa = cursor.fetchone()[0]
+    user_grypa = user_grypa.upper().replace('_', '-')
+
+    db_filename = user_grypa + '.db'
+    conn.close()
+    jurnal1_2(message, db_filename, user_grypa)
+def jurnal1_2(message,db_filename,user_grypa):
+    conn = sqlite3.connect(f'{db_filename}')
+    cursor = conn.cursor()
+    cursor.execute('SELECT Предмети FROM Предмети')
+    result = cursor.fetchall()
+
+    keyboard = []
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for row in result:
+        subject = row[0]
+        keyboard.append(subject)
+        markup.add(types.KeyboardButton(subject))
+
+    markup.add(types.KeyboardButton('🔙Назад'))
+    bot.send_message(message.chat.id, "Оберіть журнал предмету з яким ви хочете працювати:", reply_markup=markup)
+    bot.register_next_step_handler(message, jurnal1_3, db_filename,user_grypa,keyboard)
+    conn.close()
+def jurnal1_3(message,db_filename,user_grypa,keyboard):
+    subject = message.text
+    if subject == '🔙Назад':
+        message_handler_start(message)
+    elif subject not in keyboard:
+        bot.send_message(message.chat.id, "Ви вибрали не вірний предмет")
+        jurnal1_2(message,db_filename,user_grypa)
+
+    elif subject.startswith('/'):
+        bot.send_message(message.chat.id, "Ви ввели команду будь ласка оберіть предмет:")
+        jurnal1_2(message, db_filename, user_grypa)
+
+    elif subject in keyboard:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('Модуль 1')
+        item2 = types.KeyboardButton('Модуль 2')
+        item3 = types.KeyboardButton('Інше')
+        back = types.KeyboardButton('🔙Назад')
+        markup.add(back)
+        markup.add(item1)
+        markup.add(item2)
+        markup.add(item3)
+
+        bot.send_message(message.chat.id, "Оберіть, розділ:",reply_markup=markup)
+        bot.register_next_step_handler(message, jurnal1_4, db_filename, user_grypa, subject)
+def jurnal1_4(message,db_filename,user_grypa,subject):
+    subject = subject.replace(" ", "_")
+    table = message.text
+    if table == '🔙Назад':
+        message_handler_start(message)
+
+    elif table.startswith('/'):
+        bot.send_message(message.chat.id, "Ви ввели команду будь ласка оберіть розділ, який хочете редагувати")
+        jurnal1_3(message, db_filename, user_grypa,subject)
+
+
+
+    elif table in ['Модуль 1', 'Модуль 2', 'Інше']:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('Додати оцінку')
+        item2 = types.KeyboardButton('Редагувати назву теми')
+        item3 = types.KeyboardButton('Додати тему')
+        back = types.KeyboardButton('🔙Назад')
+        markup.add(back)
+        markup.add(item1)
+        markup.add(item2)
+        markup.add(item3)
+        bot.send_message(message.chat.id, "Оберіть, що саме ви хочете редагувати в журналі:", reply_markup=markup)
+        if table == 'Модуль 1':
+            table = '1'
+        elif table == 'Модуль 2':
+            table = '2'
+        elif table == 'Інше':
+            table = "3"
+
+        bot.register_next_step_handler(message, jurnal1_5, db_filename, user_grypa, subject, table)
+def jurnal1_5(message, db_filename, user_grypa, subject, table):
+    if message.text == '🔙Назад':
+        message_handler_start(message)
+
+    elif message.text == 'Додати оцінку':
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+
+        # Формуємо назву таблиці у форматі {subject}_{table}
+        table_name = f'{subject}_{table}'
+
+        # Отримуємо назви стовпців таблиці
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns if column[1] != 'Студенти' and column[1] != 'модуль 1']
+
+        # Створюємо клавіатуру з кнопками зі списку column_names
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        for column_name in column_names:
+            markup.add(column_name)
+        markup.add(types.KeyboardButton('🔙Назад'))
+
+        # Надсилаємо повідомлення з клавіатурою
+        bot.send_message(message.chat.id, "Оберіть тему в яку хочете внести оцінки:", reply_markup=markup)
+        bot.register_next_step_handler(message, jurnal1_5_1, db_filename, user_grypa, table_name ,column_names)
+        conn.close()#1_5_1
+
+    elif message.text == 'Редагувати назву теми':
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+
+        # Формуємо назву таблиці у форматі {subject}_{table}
+        table_name = f'{subject}_{table}'
+
+        # Отримуємо назви стовпців таблиці
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns if column[1] != 'Студенти' and column[1] != 'модуль 1' and column[1] != 'модуль 2']
+
+        # Створюємо клавіатуру з кнопками зі списку column_names
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        for column_name in column_names:
+            markup.add(column_name)
+        markup.add(types.KeyboardButton('🔙Назад'))
+
+        # Надсилаємо повідомлення з клавіатурою
+        bot.send_message(message.chat.id, "Оберіть тему, яку ви хочете відредагувати:", reply_markup=markup)
+
+        conn.close()
+    elif message.text == 'Додати тему':
+        bot.send_message(message.chat.id,"Функція покищо не доступна, але вам доступно 10 тем, які ви можете редагувати")
+def jurnal1_5_1(message, db_filename, user_grypa,  table_name,column_names):
+    tema = message.text
+    if tema == '🔙Назад':
+        message_handler_start(message)
+
+    elif tema in column_names:
+        bot.send_message(message.chat.id,"Будь ласка надішліть мені список студентів вашої групи їхнє повне ім\'я.\nЗа таким зразком⬇️\nТакож я надішлю вам список вашої групи, для зручнішого виставлення оцінок")
+        bot.send_message(message.chat.id,"ПІП(Одногрупника) - оцінка\nПІП(Одногрупника) - оцінка\nПІП(Одногрупника) - оцінка")
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+
+        # Витягуємо всі значення зі стовпця "Студенти" таблиці "STUDENTY"
+        cursor.execute("SELECT Студенти FROM STUDENTY")
+        students = cursor.fetchall()
+
+        # Формуємо повідомлення зі списком студентів
+        students_list = "\n".join([student[0] for student in students])
+
+        # Надсилаємо повідомлення зі списком студентів у бота
+        bot.send_message(message.chat.id, f"<code>{students_list}</code>", parse_mode=ParseMode.HTML)
+        conn.close()
+        bot.register_next_step_handler(message,jurnal1_5_2, db_filename, user_grypa,  table_name,tema)
+def jurnal1_5_2(message, db_filename, user_grypa, table_name, tema):
+    text = message.text
+    conn = sqlite3.connect(db_filename)
+    cursor = conn.cursor()
+    rows = text.split("\n")
+    for row in rows:
+        student_data = row.split(" - ")
+        if len(student_data) == 2:
+            name, grade = student_data
+            cursor.execute(
+                f"UPDATE {table_name} SET [{tema}] = ? WHERE Студенти = ?",
+                (grade, name))
+
+    conn.commit()
+    conn.close()
+    bot.send_message(message.chat.id, "Дані успішно додано до бази даних.")
+
+###########################################################
 
 def jurnal2_1(message, user_grypa):
     # Створення бази даних з назвою групи
@@ -908,13 +1212,14 @@ def jurnal2_2(message, user_grypa):
     text = ''.join(filter(lambda x: not x.isdigit(), text))
 
     # Знаки, які ми хочемо видалити
-    characters_to_remove = '().-:;,+#*$&?!`~"'
+    characters_to_remove = '().:;,+#*$&?!`~"'
 
     # Видаляємо знаки з тексту
     for char in characters_to_remove:
         text = text.replace(char, '')
 
     jurnal2_3(message, user_grypa,text)
+
 def jurnal2_3(message,user_grypa,text):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton('Так все вірно')
@@ -923,6 +1228,7 @@ def jurnal2_3(message,user_grypa,text):
     markup.add(item2)
     bot.send_message(message.chat.id, "Будь ласка, перевірте чи ви правильно надіслали мені список своїх одногрупників".format(message.from_user), reply_markup=markup)
     bot.register_next_step_handler(message,jurnal2_4,user_grypa,text)
+
 def jurnal2_4(message,user_grypa,text):
     vid = message.text
 
@@ -937,10 +1243,6 @@ def jurnal2_4(message,user_grypa,text):
         jurnal2_1(message, user_grypa)
 
     #Виводимо результат в консоль
-
-
-
-
 
 def jurnal2_5(message,user_grypa,text):
     conn = sqlite3.connect(f"{user_grypa}.db")
@@ -959,6 +1261,7 @@ def jurnal2_5(message,user_grypa,text):
     bot.send_message(message.chat.id, "Збережено✅")
     bot.send_message(message.chat.id, "А тепер перейдемо до створення журналу предметів, надішліть мені будь ласка ЧЕРЕЗ КОМУ повні назви своїх навчальних дисциплін цього семестру.\nНадсилати ПІП викладачів, які ведуть у вас цей предмет, не потрібно🫠")
     bot.register_next_step_handler(message, jurnal2_6, user_grypa)
+
 def jurnal2_6(message,user_grypa):
     pred = message.text
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -984,7 +1287,6 @@ def jurnal2_7(message,user_grypa, pred):
         bot.send_message(message.chat.id,"Будь ласка надішліть мені ще раз ваші навчальні дисципліни і переконайтеся чи все вірно)", reply_markup=telebot.types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message,jurnal2_6, user_grypa)
 
-
 def jurnal2_8(message,user_grypa, pred):
     subjects = pred.split(', ')  # Розділяємо рядок за комами
 
@@ -997,8 +1299,6 @@ def jurnal2_8(message,user_grypa, pred):
     conn.commit()
     bot.send_message(message.chat.id, "Створюю таблиці з вашими предметами...")
     jurnal2_9(message, user_grypa)
-
-#тепер напиши мені функцію jurnal2_9 яка буде створювати
 
 def jurnal2_9(message,user_grypa):
 
@@ -1014,13 +1314,13 @@ def jurnal2_9(message,user_grypa):
     for row in result:
         pre = row[0]
         cursor.execute(
-            f'CREATE TABLE "{pre}_1" ("Студенти" TEXT, [модуль 1] INTEGER, [тема 0] INTEGER, [тема 1] INTEGER, [тема 2] INTEGER, [тема 3] INTEGER, [тема 4] INTEGER, [тема 5] INTEGER, [тема 6] INTEGER, [тема 7] INTEGER, [тема 8] INTEGER, [тема 9] INTEGER)'
+            f'CREATE TABLE "{pre}_1" ("Студенти" TEXT, [модуль 1] REAL, [тема 0] TEXT, [тема 1] TEXT, [тема 2] TEXT, [тема 3] TEXT, [тема 4] TEXT, [тема 5] TEXT, [тема 6] TEXT, [тема 7] TEXT, [тема 8] TEXT, [тема 9] TEXT)'
         )
         cursor.execute(
-            f'CREATE TABLE "{pre}_2" ("Студенти" TEXT, [модуль 2] INTEGER, [тема 0] INTEGER, [тема 1] INTEGER, [тема 2] INTEGER, [тема 3] INTEGER, [тема 4] INTEGER, [тема 5] INTEGER, [тема 6] INTEGER, [тема 7] INTEGER, [тема 8] INTEGER, [тема 9] INTEGER)'
+            f'CREATE TABLE "{pre}_2" ("Студенти" TEXT, [модуль 2] REAL, [тема 0] TEXT, [тема 1] TEXT, [тема 2] TEXT, [тема 3] TEXT, [тема 4] TEXT, [тема 5] TEXT, [тема 6] TEXT, [тема 7] TEXT, [тема 8] TEXT, [тема 9] TEXT)'
         )
         cursor.execute(
-            f'CREATE TABLE "{pre}_3" ("Студенти" TEXT, [модуль 1] INTEGER, [модуль 2] INTEGER, [індз] INTEGER, [підсумковий контроль] INTEGER, [загальна кількість балів] INTEGER)'
+            f'CREATE TABLE "{pre}_3" ("Студенти" TEXT, [модуль 1] REAL, [модуль 2] REAL, [індз] INTEGER, [підсумковий контроль] INTEGER, [загальна кількість балів] REAL)'
         )
 
         for student in students:
@@ -1031,6 +1331,7 @@ def jurnal2_9(message,user_grypa):
     conn.commit()
     conn.close()
     bot.send_message(message.chat.id, "Таблиці успішно створенні✅")
+    message_handler_start(message)
 
 def redaguvanna(message,user_id):
     den = message.text
