@@ -306,63 +306,7 @@ def legion(message):
     bot.send_message(message.chat.id, "пшш пшш пшш Олег пукнув\nце Олег @phantomkahueta ".format(message.from_user))
 #####################################################################################################################
 ######################################################################################################################
-@bot.message_handler(commands=['homework'])
-def check_starost(message):
-    user_id = message.from_user.id
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
-    user_rol = cursor.fetchone()
-    if user_rol:
-        user_rol = user_rol[0]
-        if user_rol == 'староста':
-            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            item7 = types.KeyboardButton('🔙 Назад')
-            keyboard.add(item7)
-            bot.send_message(message.chat.id, "Надішліть мені предмет з якого вам задали дошнє завдання: ", reply_markup=keyboard)
-            bot.register_next_step_handler(message, homework_subject)
-        else:
-            bot.send_message(message.chat.id, "Ви не є старостою, ви не можете надсилати домашнє завдання")
-            message_handler_start(message)
-    else:
-        bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
-        message_handler_start(message)
-def homework_subject(message: types.Message):
-    subject = message.text
-    if message.text == '🔙 Назад':
-        # Виклик команди "/start" при натисканні кнопки "🔙 Назад"
-        bot.send_message(message.chat.id, 'Повертаюся в головне меню...')
-        message_handler_start(message)
-    else:
-        bot.send_message(message.chat.id,'Будь ласка, коротко опишіть, які завдання вам задані у цьому предметі:')
-        bot.register_next_step_handler(message, save_homework, subject)
-def save_homework(message: types.Message, subject):
-    text_work = message.text
-    user_id = message.from_user.id
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {user_id}")
-    user_grypa = cursor.fetchone()[0]
-    # вставляємо новий запис до таблиці з назвою, що міститься у змінній user_grypa
-    insert_query = f"INSERT INTO {user_grypa} (subject, text) VALUES (?, ?)"
-    cursor.execute(insert_query, (subject, text_work))
-    conn.commit()
-    bot.send_message(message.chat.id, "✅ Домашнє завдання збережено та розіслано вашим одногрупникам!")
-    save_studend_text(message, subject, text_work)
-def save_studend_text(message, subject, text_work):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    chat_id = message.chat.id
-    cursor.execute(f"SELECT grypa FROM login_id WHERE id = {chat_id}")
-    user_group = cursor.fetchone()[0]
-    cursor.execute(f"SELECT id FROM login_id WHERE grypa = '{user_group}'")
-    rows = cursor.fetchall()
-    for row in rows:
-        user_id = row[0]
-        insert_query =  f"INSERT INTO table_{user_id} (subject, text) VALUES (?, ?)"
-        cursor.execute(insert_query, (subject, text_work))
-    conn.commit()
-    conn.close()
+
 @bot.message_handler(commands=['delete'])
 def delete(message):
     # запитуємо у користувача айді отримувача повідомлення
@@ -708,11 +652,12 @@ def menu_vikladacham_5(message, db_filename,subject,key):
         cursor.execute(f"SELECT Закритий_предмет FROM Предмети WHERE Предмети = '{subject}'")
         close = cursor.fetchone()
         result_variable = close[0]
-        print(result_variable)
+
         if result_variable == 'Закритий предмет':
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             item1 = types.KeyboardButton('Так')
             item2 = types.KeyboardButton('Ні')
+            markup.add(item1, item2)
             bot.send_message(message.chat.id,"Предмет вже закритий можливо ви б хотіли його відкрити?)))",reply_markup=markup)
             bot.register_next_step_handler(message, open_subject, db_filename, subject)
         else:
@@ -723,20 +668,18 @@ def open_subject(message,db_filename,subject):
         subject = subject.replace("_", " ")
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
-        a = 'NULL'
-        a1 = 'NULL'
-        a2 = 'NULL'
-        cursor.execute(f'UPDATE Предмети SET Закритий_модуль_1 = ? WHERE Предмети = ?',(a1,subject))
-        cursor.execute(f'UPDATE Предмети SET Закритий_модуль_2 = ? WHERE Предмети = ?', (a2, subject))
-        cursor.execute(f'UPDATE Предмети SET Закритий_предмет = ? WHERE Предмети = ?', (a, subject))
+        cursor.execute(f'UPDATE Предмети SET Закритий_модуль_1 = NULL WHERE Предмети = ?',(subject,))
+        cursor.execute(f'UPDATE Предмети SET Закритий_модуль_2 = NULL WHERE Предмети = ?', (subject,))
+        cursor.execute(f'UPDATE Предмети SET Закритий_предмет = NULL WHERE Предмети = ?', (subject,))
         conn.commit()
         conn.close()
+        bot.send_message(message.chat.id, f"Предмет {subject} відкритий ")
+        menu_vikladacham(message)
     elif text == 'Ні':
         menu_vikladacham(message)
     else:
         bot.send_message(message.chat.id, "Такого варіанту відповіді немає")
         bot.register_next_step_handler(message, open_subject, db_filename, subject)
-
 def close_subject(message,db_filename,subject):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton('Так🥶')
@@ -746,8 +689,6 @@ def close_subject(message,db_filename,subject):
                      f"Ви обрали функцію закриття предмету {subject}. Чи ви впевнені, що хочете позбавити старост статусу редагування цього предмету? Будь ласка, оберіть один із варіантів відповіді нижче.",
                      reply_markup=markup)
     bot.register_next_step_handler(message, close_subject_2, db_filename, subject)
-
-
 def close_subject_2(message,db_filename,subject):
     text = message.text
     if text == 'Так🥶':
@@ -773,8 +714,6 @@ def close_subject_2(message,db_filename,subject):
     else:
         bot.send_message(message.chat.id, "Такого варіанту відповіді немає")
         bot.register_next_step_handler(message, close_subject_2, db_filename, subject)
-
-
 def exam_assessment(message, db_filename, subject, key):
     text = message.text
     conn = sqlite3.connect(db_filename)
@@ -811,8 +750,6 @@ def exam_assessment(message, db_filename, subject, key):
         bot.send_message(message.chat.id,
                          f"{message_text} Ось ці рядки я не зміг розпізнати, будь ласка надішліть ще раз і правильно за таким зразком\n\nПІП - Оцінка\nПІП - Оцінка")
         bot.register_next_step_handler(message,exam_assessment, db_filename, subject, key)
-
-
 def menu_vikladacham_add_grate_modul(message, db_filename,subject, table,key):
     text = message.text
     if text.startswith('/'):
@@ -868,25 +805,117 @@ def menu_vikladacham_add_grate_modul(message, db_filename,subject, table,key):
         bot.register_next_step_handler(message,menu_vikladacham_look_grate_1,db_filename, table_name, subject)
 
     elif text == 'Ред. назву тему':
-        bot.send_message(message.chat.id, "Функція в розробці")
-        bot.register_next_step_handler(message, menu_vikladacham_add_grate_modul, db_filename, subject, table)
-    elif text == 'Додати тему':
-        bot.send_message(message.chat.id, "Функція в розробці")
-        bot.register_next_step_handler(message, menu_vikladacham_add_grate_modul, db_filename, subject, table)
-    elif text == 'Закрити модуль':
-        bot.send_message(message.chat.id, "Функція в розробці")
-        bot.register_next_step_handler(message, menu_vikladacham_add_grate_modul, db_filename, subject, table)
+        subject = subject.replace(" ","_")
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        # Формуємо назву таблиці у форматі {subject}_{table}
+        table_name = f'{subject}_{table}'
 
+        # Отримуємо назви стовпців таблиці
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns if
+                        column[1] != 'Студенти' and column[1] != 'модуль_1' and column[1] != 'модуль_2' and column[
+                            1] != 'Н']
+
+        # Створюємо клавіатуру з кнопками зі списку column_names
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        for column_name in column_names:
+            markup.add(column_name)
+        markup.add(types.KeyboardButton('🔙Назад'))
+
+        # Надсилаємо повідомлення з клавіатурою
+        user_grypa = db_filename.split(".")
+        user_grypa = user_grypa[0]
+        bot.send_message(message.chat.id, "Оберіть тему, яку ви хочете відредагувати:", reply_markup=markup)
+        bot.register_next_step_handler(message, jurnal1_tema_1, db_filename, user_grypa, subject, table, column_names)
+
+        conn.close()
+
+
+    elif text == 'Додати тему':
+        subject = subject.replace(" ", "_")
+        bot.send_message(message.chat.id, "Надішліть назву нової теми для предмету",
+                         reply_markup=telebot.types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(message, jurnal_1_dodavanna_temy, db_filename, subject, table)
+
+
+
+    elif text == 'Закрити модуль':
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT Закритий_модуль_{table} FROM Предмети WHERE Предмети = '{subject}'")
+        close = cursor.fetchone()
+        result_variable = close[0]
+
+        if result_variable == f'Закритий модуль {table}':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item1 = types.KeyboardButton('Так')
+            item2 = types.KeyboardButton('Ні')
+            markup.add(item1, item2)
+            bot.send_message(message.chat.id,f"Модуль {table} вже закритий можливо ви б хотіли його відкрити?)))",reply_markup=markup)
+            bot.register_next_step_handler(message, open_module, db_filename, subject, table)
+        else:
+            close_module_1(message, db_filename, subject,table)
     else:
         bot.send_message(message.chat.id, "Такого варіанту немає")
         bot.register_next_step_handler(message, menu_vikladacham_add_grate_modul, db_filename, subject, table, key)
+
+
+
+def open_module(message, db_filename, subject,table):
+    text = message.text
+    if text == 'Так':
+        subject = subject.replace("_", " ")
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+
+
+        cursor.execute(f'UPDATE Предмети SET Закритий_модуль_{table} = NULL WHERE Предмети = ?', (subject,))
+
+        conn.commit()
+        conn.close()
+        bot.send_message(message.chat.id, f"Модуль {table} відкритий для старост")
+        menu_vikladacham(message)
+    elif text == 'Ні':
+        menu_vikladacham(message)
+    else:
+        bot.send_message(message.chat.id, "Такого варіанту відповіді немає")
+        bot.register_next_step_handler(message, open_subject, db_filename, subject)
+def close_module_1(message, db_filename, subject,table):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Так🥶')
+    item2 = types.KeyboardButton('Ні🥵')
+    markup.add(item1, item2)
+    bot.send_message(message.chat.id,
+                     f"Ви обрали функцію закриття Модуля {table} для предмету {subject}. Чи ви впевнені, що хочете позбавити старост статусу редагування цього модуля? Будь ласка, оберіть один із варіантів відповіді нижче.",
+                     reply_markup=markup)
+    bot.register_next_step_handler(message, close_module, db_filename, subject, table)
+def close_module(message,db_filename, subject, table):
+    text = message.text
+    if text == 'Так🥶':
+        subject = subject.replace("_", " ")
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        a = f'Закритий модуль {table}'
+        cursor.execute(f'UPDATE Предмети SET Закритий_модуль_{table} = ? WHERE Предмети = ?', (a, subject))
+        conn.commit()
+        conn.close()
+        bot.send_message(message.chat.id, f"ви відкрили Модуль {table} із предмету {subject}")
+        menu_vikladacham(message)
+    elif text == 'Ні🥵':
+        menu_vikladacham(message)
+    else:
+        bot.send_message(message.chat.id, "Такого варіанту відповіді немає")
+        bot.register_next_step_handler(message,close_module, db_filename, subject, table)
+
 def menu_vikladacham_look_grate_1(message,db_filename, table_name, subject):
 
     text = message.text
     if text == "2":
         menu_vikladacham_look_grate_2_1(message, db_filename, table_name, subject)
     elif text == '1':
-        bot.send_message(message.chat.id, "Надішліть повне ПІП студента у якого хочете переглянути оцінки")
+        bot.send_message(message.chat.id, "Функція скоро буде")
 def menu_vikladacham_look_grate_2_1(message, db_filename, table_name, subject):
     conn = sqlite3.connect(db_filename)
     cursor = conn.cursor()
@@ -998,36 +1027,6 @@ def menu_vickladacham_add_grate_2(message, db_filename, subject, table, tema):
         message_text = "\n\n".join(list)
         bot.send_message(message.chat.id,f"{message_text} Ось ці рядки я не зміг розпізнати, будь ласка надішліть ще раз і правильно за таким зразком\n\nПІП - Оцінка\nПІП - Оцінка", reply_markup=telebot.types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, menu_vickladacham_add_grate_2, db_filename, subject, table, tema)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @bot.message_handler(commands=['menu'])
 def message_handler_start(message):
     user_id = message.from_user.id
@@ -1076,8 +1075,6 @@ def message_handler_start(message):
             markup.add(item_menu)
             markup.add(item5_6)
             bot.send_message(message.chat.id, "👇".format(message.from_user), reply_markup=markup)
-
-
 def support_project(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     info = types.KeyboardButton('Інформація про підтримку')
@@ -1116,8 +1113,6 @@ def response(message):
     conn.close()
     bot.send_message(message.chat.id, 'Дякую за відгук)')
     message_handler_start(message)
-
-
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
@@ -1129,21 +1124,8 @@ def bot_message(message):
             support_project(message)
 
         elif message.text == 'Додати домашку':
-            user_id = message.from_user.id
-            conn = sqlite3.connect('users.db')
-            cursor = conn.cursor()
-            cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
-            user_rol = cursor.fetchone()
-            if user_rol:
-                user_rol = user_rol[0]
-                if user_rol == 'староста':
-                    homework(message)
-                else:
-                    bot.send_message(message.chat.id, "Ви не є старостою, ви не можете користуватися цим меню)")
-                    message_handler_start(message)
-            else:
-                bot.send_message(message.chat.id, "Користувача не знайдено в базі даних")
-                message_handler_start(message)
+            bot.send_message(message.chat.id, "Функція в розробці")
+            bot.register_next_step_handler(message,bot_message)
 
         elif message.text == 'Старостам':
             user_id = message.from_user.id
@@ -1384,7 +1366,6 @@ def bot_message(message):
 
         elif message.text == 'Оголошення для групи':
             ogoloshennya_grypa(message)
-
 def chet_teacer(message):
     user_id = message.chat.id
     user_id = str(user_id)
@@ -1475,9 +1456,6 @@ def teacher_pred2(message, user_id, lines_list):
     conn.commit()
     conn.close()
     menu_vikladacham(message)
-
-
-
 def ogoloshennya_grypa(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item_back = types.KeyboardButton('🔙Назад')
@@ -2392,7 +2370,6 @@ def jurnal_1_pereglad_ocinok(message, db_filename, user_grypa, subject, table,co
         gem = "\n".join([row for row in results])
 
         bot.send_message(message.chat.id, f"Ось оцінки із теми{subject.replace('_', ' ')}\n{gem}")
-
 def jurnal_1_dodavanna_temy(message, db_filename, subject, table):
     new_tema = message.text
     kay = ["модуль 1", 'модуль 2', 'Модуль 1', 'Модуль 2', "залік", "Залік", 'Екзамен', 'екзамен',
@@ -2444,6 +2421,7 @@ def jurnal_1_dodavanna_temy_3(message, db_filename, subject, table,new_tema):
         bot.register_next_step_handler(message, jurnal_1_dodavanna_temy_3, db_filename, subject, table, new_tema)
 def jurnal_1_dodavanna_temy_4(message, db_filename, subject, table,new_tema):
     text = message.text
+    user_id = message.chat.id
     if text == 'Актуальна дата':
         current_date = datetime.datetime.now()
         formatted_date = current_date.strftime("%d.%m.%Y")
@@ -2454,7 +2432,29 @@ def jurnal_1_dodavanna_temy_4(message, db_filename, subject, table,new_tema):
         conn.commit()
         conn.close()
         bot.send_message(message.chat.id, f"Дата додана {formatted_date} до теми {new_tema}")
-        jurnal1_1(message)
+        connect = sqlite3.connect('users.db')
+        cursor1 = connect.cursor()
+        cursor1.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+        user_rol = cursor1.fetchone()
+        user_rol = user_rol[0]
+        conn.close()
+        connect.close()
+        if user_rol == 'староста':
+            jurnal1_1(message)
+        elif user_rol == 'викладач':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item2 = types.KeyboardButton('Робота з журналами')
+            homework = types.KeyboardButton('Додати домашнє')
+            item4 = types.KeyboardButton('Оголошення для групи')
+            back = types.KeyboardButton('🔙Назад')
+            markup.add(back)
+            markup.add(item2)
+            markup.add(homework)
+            markup.add(item4)
+            bot.send_message(message.chat.id,
+                             "Ви попали в меню викладачам оберіть функцію з якою хочете працювати".format(
+                                 message.from_user), reply_markup=markup)
+            bot.register_next_step_handler(message, menu_vikladacham_2)
 
     elif text == 'Ввести дату':
         bot.send_message(message.chat.id, "Введіть дату за зразком 01.01.2023")
@@ -2462,11 +2462,11 @@ def jurnal_1_dodavanna_temy_4(message, db_filename, subject, table,new_tema):
     else:
         bot.send_message(message.chat.id, "Такого варінту немає оберіть тип дати ще раз")
         bot.register_next_step_handler(message, jurnal_1_dodavanna_temy_4, db_filename, subject, table, new_tema)
-
 def jurnal_1_dodavanna_temy_5(message, db_filename, subject, table,new_tema):
     text = message.text
     lines = text.split(".")
     notcifra = []
+    user_id = message.chat.id
     i = 0
     if len(lines) > 3:
         bot.send_message(message.chat.id, "Не правлений формат рядка\nВведіть дату за зразком 01.01.2023")
@@ -2493,9 +2493,30 @@ def jurnal_1_dodavanna_temy_5(message, db_filename, subject, table,new_tema):
         conn.commit()
         conn.close()
         bot.send_message(message.chat.id, f"Дата додана {text} до теми {new_tema}")
-        jurnal1_1(message)
 
-
+        connect = sqlite3.connect('users.db')
+        cursor1 = connect.cursor()
+        cursor1.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+        user_rol = cursor1.fetchone()
+        user_rol = user_rol[0]
+        conn.close()
+        connect.close()
+        if user_rol == 'староста':
+            jurnal1_1(message)
+        elif user_rol == 'викладач':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item2 = types.KeyboardButton('Робота з журналами')
+            homework = types.KeyboardButton('Додати домашнє')
+            item4 = types.KeyboardButton('Оголошення для групи')
+            back = types.KeyboardButton('🔙Назад')
+            markup.add(back)
+            markup.add(item2)
+            markup.add(homework)
+            markup.add(item4)
+            bot.send_message(message.chat.id,
+                             "Ви попали в меню викладачам оберіть функцію з якою хочете працювати".format(
+                                 message.from_user), reply_markup=markup)
+            bot.register_next_step_handler(message, menu_vikladacham_2)
 def jurnal1_tema_1(message, db_filename, user_grypa, subject, table, column_names):
     tema = message.text
     if tema == '🔙Назад':
@@ -2566,6 +2587,7 @@ def jurnal1_tema_3(message, db_filename, user_grypa, subject, table,column_names
         bot.register_next_step_handler(message, jurnal1_tema_3, db_filename, user_grypa, subject, table,column_names,tema_new)
 def jurnal1_tema_4(message, db_filename, user_grypa, subject, table,column_names,tema_new):
     text = message.text
+    user_id = message.chat.id
     if text == 'Актуальна дата':
         current_date = datetime.datetime.now()
         formatted_date = current_date.strftime("%d.%m.%Y")
@@ -2576,7 +2598,29 @@ def jurnal1_tema_4(message, db_filename, user_grypa, subject, table,column_names
         conn.commit()
         conn.close()
         bot.send_message(message.chat.id, f"Дата додана {formatted_date} до теми {tema_new}")
-        jurnal1_1(message)
+        connect = sqlite3.connect('users.db')
+        cursor1 = connect.cursor()
+        cursor1.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+        user_rol = cursor1.fetchone()
+        user_rol = user_rol[0]
+        conn.close()
+        connect.close()
+        if user_rol == 'староста':
+            jurnal1_1(message)
+        elif user_rol == 'викладач':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item2 = types.KeyboardButton('Робота з журналами')
+            homework = types.KeyboardButton('Додати домашнє')
+            item4 = types.KeyboardButton('Оголошення для групи')
+            back = types.KeyboardButton('🔙Назад')
+            markup.add(back)
+            markup.add(item2)
+            markup.add(homework)
+            markup.add(item4)
+            bot.send_message(message.chat.id,
+                             "Ви попали в меню викладачам оберіть функцію з якою хочете працювати".format(
+                                 message.from_user), reply_markup=markup)
+            bot.register_next_step_handler(message, menu_vikladacham_2)
 
     elif text == 'Ввести дату':
         bot.send_message(message.chat.id, "Введіть дату за зразком 01.01.2023")
@@ -2584,11 +2628,11 @@ def jurnal1_tema_4(message, db_filename, user_grypa, subject, table,column_names
     else:
         bot.send_message(message.chat.id, "Такого варінту немає оберіть тип дати ще раз")
         bot.register_next_step_handler(message, jurnal1_tema_4, db_filename, user_grypa, subject, table,column_names,tema_new)
-
 def jurnal1_tema_5(message, db_filename, user_grypa, subject, table,column_names,tema_new):
     text = message.text
     lines = text.split(".")
     notcifra = []
+    user_id = message.chat.id
     i = 0
     if len(lines) > 3:
         bot.send_message(message.chat.id, "Не правлений формат рядка\nВведіть дату за зразком 01.01.2023")
@@ -2612,10 +2656,33 @@ def jurnal1_tema_5(message, db_filename, user_grypa, subject, table,column_names
         cursor = conn.cursor()
         text2 = "Дата"
         cursor.execute(f"UPDATE {subject}_{table} SET [{tema_new}] = ? WHERE Студенти = ?", (text, text2))
-        conn.commit()
-        conn.close()
         bot.send_message(message.chat.id, f"Дата додана {text} до теми {tema_new}")
-        jurnal1_1(message)
+        connect = sqlite3.connect('users.db')
+        cursor1 = connect.cursor()
+        cursor1.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+        user_rol = cursor1.fetchone()
+        user_rol = user_rol[0]
+        conn.close()
+        connect.close()
+        if user_rol == 'староста':
+            jurnal1_1(message)
+        elif user_rol == 'викладач':
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item2 = types.KeyboardButton('Робота з журналами')
+            homework = types.KeyboardButton('Додати домашнє')
+            item4 = types.KeyboardButton('Оголошення для групи')
+            back = types.KeyboardButton('🔙Назад')
+            markup.add(back)
+            markup.add(item2)
+            markup.add(homework)
+            markup.add(item4)
+            bot.send_message(message.chat.id,
+                             "Ви попали в меню викладачам оберіть функцію з якою хочете працювати".format(
+                                 message.from_user), reply_markup=markup)
+            bot.register_next_step_handler(message, menu_vikladacham_2)
+
+
+
 
 
 
