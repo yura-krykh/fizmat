@@ -11,11 +11,17 @@ import os
 import openai
 from telebot import TeleBot
 import urllib.request
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
+from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQueryHandler, ConversationHandler
+
+from base64 import b64decode
 import time
 import json
 CHAT_ID = 628446966
 TELEGRAM_API_KEY = '5428270852:AAEbBDt8RiYgiizDEC7o5oTz4vl-x7Ls5ng'
-OPENAI_API_KEY = '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'
+openai.api_key = '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'
+updater = Updater(token=TELEGRAM_API_KEY, use_context=True)
+dispatcher = updater.dispatcher
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
 def get_user_data(user_id):
     connect = sqlite3.connect('users.db')
@@ -48,8 +54,53 @@ def start(message: types.Message):
         bot.register_next_step_handler(message, get_email)
 
     else:
-        bot.send_message(message.chat.id, "Ти вже зареєстрований!")
-        message_handler_start(message)
+        user_id = message.from_user.id
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT roli FROM login_id WHERE id = {user_id}")
+        user_rol = cursor.fetchone()
+        if user_rol:
+            user_rol = user_rol[0]
+            if user_rol == 'староста':
+                markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                item1 = types.KeyboardButton('📜Профіль')
+                item2 = types.KeyboardButton('✍️Розклад пар')
+                item3 = types.KeyboardButton('Контакти викладачів')
+                jurnal = types.KeyboardButton('Журнал')
+                item4 = types.KeyboardButton('Старостам')
+                item5 = types.KeyboardButton('Домашка')
+                item_menu = types.KeyboardButton('Інформація про розробників')
+                item5_6 = types.KeyboardButton('Підтримка проекту')
+                markup.add(item1, item2, item3, jurnal, item4, item5)
+                markup.add(item_menu)
+                markup.add(item5_6)
+                bot.send_message(message.chat.id, "Ти вже зареєстрований!".format(message.from_user), reply_markup=markup)
+            elif user_rol == 'викладач':
+                markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                item1 = types.KeyboardButton('📜Профіль')
+                item2 = types.KeyboardButton('✍️Розклад пар')
+                item3 = types.KeyboardButton('Контакти викладачів')
+                item4 = types.KeyboardButton('Викладачам')
+                item_menu = types.KeyboardButton('Інформація про розробників')
+                item5_6 = types.KeyboardButton('Підтримка проекту')
+                markup.add(item1, item2, item3, item4)
+                markup.add(item_menu)
+                markup.add(item5_6)
+                bot.send_message(message.chat.id, "Ти вже зареєстрований!".format(message.from_user), reply_markup=markup)
+            elif user_rol == 'студент':
+                markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                item1 = types.KeyboardButton('📜Профіль')
+                item2 = types.KeyboardButton('✍️Розклад пар')
+                item3 = types.KeyboardButton('Контакти викладачів')
+                jurnal = types.KeyboardButton('Журнал')
+                item5 = types.KeyboardButton('Домашка')
+                item_menu = types.KeyboardButton('Інформація про розробників')
+                item5_6 = types.KeyboardButton('Підтримка проекту')
+                markup.add(item1, item2, item3, jurnal, item5)
+                markup.add(item_menu)
+                markup.add(item5_6)
+                bot.send_message(message.chat.id, "Ти вже зареєстрований!".format(message.from_user), reply_markup=markup)
+
 def get_email(message: types.Message):
     email = message.text
     email = email.lower()
@@ -72,14 +123,16 @@ def get_email(message: types.Message):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM Email_Base WHERE Email_Address=?", (email,))
         row = cursor.fetchone()
+        cursor.execute("SELECT ПІП FROM Email_Base WHERE Email_Address=?", (email,))
+        pib = cursor.fetchone()
+
         if row:
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            button_student = types.KeyboardButton("Студент")
-            button_starosta = types.KeyboardButton("Староста")
-            button_vikladach = types.KeyboardButton("Викладач")
-            keyboard.add(button_student, button_starosta, button_vikladach)
-            bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
-            bot.register_next_step_handler(message, get_role, email)
+            button2 = types.KeyboardButton("Так")
+            button1 = types.KeyboardButton("Ні")
+            keyboard.add(button2, button1)
+            bot.send_message(message.chat.id, f"{pib[0]}\nБудь ласка скажіть це ваше прізвище?", reply_markup=keyboard)
+            bot.register_next_step_handler(message, get_first_last, email,pib)
 
 
         else:
@@ -89,12 +142,46 @@ def get_email(message: types.Message):
             bot.register_next_step_handler(message, get_email)
         cursor.close()
         conn.close()
-def get_role(message, email):
+
+
+
+
+def get_first_last(message,email,pib):
+    text = message.text
+    if text == "Так":
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        button_student = types.KeyboardButton("Студент")
+        button_starosta = types.KeyboardButton("Староста")
+        button_vikladach = types.KeyboardButton("Викладач")
+        keyboard.add(button_student, button_starosta, button_vikladach)
+        bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
+        bot.register_next_step_handler(message, get_role, email,pib)
+
+    elif text =="Ні":
+        bot.send_message(message.chat.id, "Введіть тоді своє ПІБ:")
+        bot.register_next_step_handler(message, get_first_last_2, email, pib)
+
+    else:
+        bot.send_message(message.chat.id,"Такого варіанту немає")
+        bot.register_next_step_handler(message, get_first_last, email, pib)
+
+def get_first_last_2(message,email,pib):
+    text = message.text
+    pib = text
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_student = types.KeyboardButton("Студент")
+    button_starosta = types.KeyboardButton("Староста")
+    button_vikladach = types.KeyboardButton("Викладач")
+    keyboard.add(button_student, button_starosta, button_vikladach)
+    bot.send_message(message.chat.id, "Виберіть вашу роль:", reply_markup=keyboard)
+    bot.register_next_step_handler(message, get_role, email, pib)
+
+def get_role(message, email,pib):
     role = message.text
 
     if role.startswith('/'):
         bot.send_message(message.chat.id,"Ви ввели команду, а не роль")
-        bot.register_next_step_handler(message, get_role, email)
+        bot.register_next_step_handler(message, get_role, email,pib)
 
     elif role == 'Студент':
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -118,10 +205,10 @@ def get_role(message, email):
         item18 = types.KeyboardButton('КН-36')
         item19 = types.KeyboardButton('СОФІ-41')
         item20 = types.KeyboardButton('СОМІ-42')
-        item21 = types.KeyboardButton('СОIM-43')
+        item21 = types.KeyboardButton('СОІМ-43')
         item22 = types.KeyboardButton('СОІнск-24')
         item23 = types.KeyboardButton('мСОФ-11')
-        item24 = types.KeyboardButton('мСОМ-12')
+        item24 = types.KeyboardButton('мСОФ-12')
         item25 = types.KeyboardButton('мСОІн-13')
         item26 = types.KeyboardButton('мСОФ-21')
         item27 = types.KeyboardButton('мСОМ-22')
@@ -132,27 +219,23 @@ def get_role(message, email):
         bot.send_message(message.chat.id,
                          "Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",
                          reply_markup=keyboard)
-        bot.register_next_step_handler(message, get_group_stud, email,role)
-
-
-
-
+        bot.register_next_step_handler(message, get_group_stud, email,role,pib)
 
     elif role == 'Викладач':
         # Запит паролю для ролі викладача
         bot.send_message(message.chat.id, "Будь ласка, введіть пароль для викладача:")
-        bot.register_next_step_handler(message, get_password,  role, email)
+        bot.register_next_step_handler(message, get_password,  role, email,pib)
 
     elif role == 'Староста':
         # Запит паролю для ролі старости
         bot.send_message(message.chat.id, "Будь ласка, введіть пароль для старости:")
-        bot.register_next_step_handler(message, get_password, role, email )
+        bot.register_next_step_handler(message, get_password, role, email,pib)
 
     else:
         # Надсилання повідомлення про неправильний вибір ролі
         bot.send_message(message.chat.id, "Виберіть роль з наданих кнопок.")
-        bot.register_next_step_handler(message, get_role, email)
-def get_password(message, role, email):
+        bot.register_next_step_handler(message, get_role, email,pib)
+def get_password(message, role, email,pib):
     password = message.text
 
     if role == 'Викладач' and password == '000':
@@ -162,7 +245,7 @@ def get_password(message, role, email):
         item3 = types.KeyboardButton('Фізика👨‍🔬')
         board.add(item1, item2, item3)
         bot.send_message(message.chat.id, "Виберіть із якої ви кафедри:", reply_markup=board)
-        bot.register_next_step_handler(message, kafedra, email, role)
+        bot.register_next_step_handler(message, kafedra, email, role,pib)
 
     elif role == 'Староста' and password == '111':
         # Встановлення ролі старости в базі даних
@@ -189,10 +272,10 @@ def get_password(message, role, email):
         item18 = types.KeyboardButton('КН-36')
         item19 = types.KeyboardButton('СОФІ-41')
         item20 = types.KeyboardButton('СОМІ-42')
-        item21 = types.KeyboardButton('СОIM-43')
+        item21 = types.KeyboardButton('СОІМ-43')
         item22 = types.KeyboardButton('СОІнск-24')
         item23 = types.KeyboardButton('мСОФ-11')
-        item24 = types.KeyboardButton('мСОМ-12')
+        item24 = types.KeyboardButton('мСОФ-12')
         item25 = types.KeyboardButton('мСОІн-13')
         item26 = types.KeyboardButton('мСОФ-21')
         item27 = types.KeyboardButton('мСОМ-22')
@@ -203,7 +286,7 @@ def get_password(message, role, email):
         bot.send_message(message.chat.id,
                          "Будь ласка, будьте уважні при виборі своєї групи. Оберіть дійсну групу, оскільки редагування групи не буде можливим. Якщо помилилися з вибором групи напишіть в /support",
                          reply_markup=keyboard)
-        bot.register_next_step_handler(message, get_group_stud, email, role)
+        bot.register_next_step_handler(message, get_group_stud, email, role,pib)
 
 
 
@@ -211,16 +294,16 @@ def get_password(message, role, email):
     else:
         # Надсилання повідомлення про неправильний пароль
         bot.send_message(message.chat.id, "Неправильний пароль. Спробуйте ще раз.")
-        bot.register_next_step_handler(message, get_password, role, email)
-def kafedra(message, email, role):
+        bot.register_next_step_handler(message, get_password, role, email,pib)
+def kafedra(message, email, role,pib):
     group = message.text
     if group not in ['Математика📏', 'Інформатика🧑‍💻', 'Фізика👨‍🔬']:
         bot.send_message(message.chat.id, "Ви що з хімбіо?🤨")
-        bot.register_next_step_handler(message, kafedra, message, email, role)
+        bot.register_next_step_handler(message, kafedra, message, email, role,pib)
 
     elif group.startswith('/'):
         bot.send_message(message.chat.id, "Будь ласка будьте уважніші ви ввели команду, а не назву кафедри, будь ласка введіть свою кафедру😡 ")
-        bot.register_next_step_handler(message, kafedra, email, role)
+        bot.register_next_step_handler(message, kafedra, email, role,pib)
     else:
         bot.send_message(message.chat.id, 'Будь ласка надішліть своє повне прізвище ім\'я по-батькові')
         if group == 'Математика📏':
@@ -229,8 +312,10 @@ def kafedra(message, email, role):
             group = 'Інформатик'
         elif group == 'Фізика👨‍🔬':
             group = 'Фізик'
-        bot.register_next_step_handler(message, get_first_last, email, role, group)
-def get_group_stud(message,email,role):
+        get(message, email, role, group, pib)
+
+
+def get_group_stud(message,email,role,pib):
     group = message.text
     if group not in ['СОМІ-32', 'СОІМ-33', 'СОФА-35', 'КН-36', 'мСОФ-11', 'мСОМ-12', 'СОФІ-41', 'СОМІ-42', 'СОIM-43',
                      'СОІнск-24', 'мСОІн-13', 'КМ-14', 'СОІМ-15', 'ІІП-16', 'DA-17', 'СОФІ-21', 'СОФІ-21', 'СОМІ-22',
@@ -238,16 +323,14 @@ def get_group_stud(message,email,role):
                      'КН-27', 'СОФІ-31', 'СОІМ-23', 'СОФА-25', 'СОФІ-11', 'СОФА-12', 'СОМІ-13', 'мСОФ-21', 'мСОМ-22',
                      'мСОІн-23']:
         bot.send_message(message.chat.id, "Ви ввели не правильну групу виберіть ще раз свою групу:")
-        bot.register_next_step_handler(message, get_group_stud, email, role)
+        bot.register_next_step_handler(message, get_group_stud, email, role,pib)
     elif group.startswith('/'):
         bot.send_message(message.chat.id, "Будь ласка будьте уважніші ви ввели команду а не назву групи, будь ласка введіть свою групу😡 ")
-        bot.register_next_step_handler(message, get_group_stud, email,role)
+        bot.register_next_step_handler(message, get_group_stud, email,role,pib)
     else:
         group = message.text.upper().replace('-', '_')
-        bot.send_message(message.chat.id, "Будь ласка, введіть своє ПІБ:")
-        bot.register_next_step_handler(message, get_first_last, email, role, group)
-def get_first_last(message, email, role, group):
-    first_last = message.text
+        get(message, email, role, group,pib)
+def get(message, email, role, group,pib):
     role = role.lower()
     email = email.lower()
 
@@ -259,7 +342,7 @@ def get_first_last(message, email, role, group):
 
     # Вставка даних в базу даних
     cursor.execute("INSERT INTO login_id (id, username, email, grypa, first_last, roli) VALUES(?, ?, ?, ?, ?, ?);",
-                   (user_id, user_name, email, group, first_last, role))
+                   (user_id, user_name, email, group, pib, role))
     connect.commit()
     bot.send_message(message.chat.id, "Успішна реєстрація")
     create_rozklad_table(message)
@@ -305,6 +388,33 @@ def shurik(message):
 def legion(message):
     bot.send_message(message.chat.id, "пшш пшш пшш Олег пукнув\nце Олег @phantomkahueta ".format(message.from_user))
 #####################################################################################################################
+@bot.message_handler(commands=['gen'])
+def generate(message):
+    text = "Ця група не доступна"
+    bot.send_message(chat_id=message.chat.id, text=text, disable_notification=True)
+
+def generate_1(message):
+    prompt = message.text
+    response = openai.Image.create(
+        prompt=prompt,
+        n=1,
+        size='1024x1024',
+        response_format='b64_json'
+    )
+    with open('data.json', 'w') as file:
+        json.dump(response, file, indent=4, ensure_ascii=False)
+
+    image_data = b64decode(response['data'][0]['b64_json'])
+    file_name = '_'.join(prompt.split(' '))
+
+    with open(f'{file_name}.png', 'wb') as file:
+        file.write(image_data)
+
+
+    with open(f'{file_name}.png', 'rb') as photo:
+        bot.send_photo(message.chat.id, photo)
+        bot.send_message(message.chat.id,f"Ось твоє фото згідно твого запиту:\n{prompt}")
+
 ######################################################################################################################
 
 @bot.message_handler(commands=['delete'])
@@ -1147,9 +1257,6 @@ def bot_message(message):
         elif message.text == 'Викладачам':
             chet_teacer(message)
 
-        elif message.text == 'я староста' or message.text == "Я староста":
-            bot.send_message(message.chat.id, "Ти піздюк, а не староста😏")
-
         elif message.text == 'Редагувати розклад':
             user_id = message.from_user.id
             conn = sqlite3.connect('users.db')
@@ -1320,6 +1427,84 @@ def bot_message(message):
 
         elif message.text == 'Оголошення для групи':
             ogoloshennya_grypa(message)
+
+        else:
+            text = message.text
+            bot_message1(message,text)
+@bot.message_handler(content_types=['text'])
+def bot_message1(message,text):
+    if text == 'я староста' or text == "Я староста":
+        bot.send_message(message.chat.id, "Ти піздюк, а не староста😏")
+        bot.forward_message(chat_id=CHAT_ID, from_chat_id=message.chat.id, message_id=message.message_id)
+
+    elif "путін" in text.lower():
+        bot.send_message(message.chat.id, "Хуйло🤝")
+        bot.forward_message(chat_id=CHAT_ID, from_chat_id=message.chat.id, message_id=message.message_id)
+
+
+    elif "путінхуйло" in text or "путін хуйло" in text:
+        bot.send_message(message.chat.id, "Згідний🤝")
+        bot.forward_message(chat_id=CHAT_ID, from_chat_id=message.chat.id, message_id=message.message_id)
+
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('Попробуємо')
+        item2 = types.KeyboardButton('Іншим разом')
+        markup.add(item1, item2)
+        bot.send_message(message.chat.id,
+                         f"Можливо поговоримо?",
+                         reply_markup=markup)
+        bot.register_next_step_handler(message, chat_gpt)
+
+def chat_gpt(message):
+    text = message.text
+    if text == 'Попробуємо':
+        bot.send_message(message.chat.id,f"Напиши мені любе повідолмення що ти хочеш знати")
+        bot.register_next_step_handler(message, handle_text)
+    elif text == 'Іншим разом':
+        bot.send_message(message.chat.id,f"Ну добре(",)
+
+contexts = {}
+def handle_text(message):
+    chat_id = message.chat.id
+    if message.text == 'Завершити діалог':
+        message_handler_start(message)
+    elif message.text.startswith('/'):
+        message_handler_start(message)
+    # Отримуємо попередній контекст для даного користувача
+    if chat_id in contexts:
+        context = contexts[chat_id]
+    else:
+        context = ""
+
+    # Додаємо попередній контекст до повідомлення
+    input_text = f"{context}{message.text}"
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=input_text,
+        max_tokens=1024,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+    # Отримана відповідь
+    output_text = response.choices[0].text
+
+    # Зберігаємо поточний контекст для наступного повідомлення
+    contexts[chat_id] = f"{input_text}{output_text}"
+
+    # Відправляємо відповідь користувачу
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Завершити діалог')
+    markup.add(item1)
+    bot.send_message(chat_id, output_text,reply_markup=markup)
+    bot.register_next_step_handler(message, handle_text)
+
+
+
+
+
+
 def chet_teacer(message):
     user_id = message.chat.id
     user_id = str(user_id)
@@ -1769,10 +1954,119 @@ def less(message,db_filename, user_grypa):
         edit_less(message,db_filename, user_grypa)
 
     elif text == 'Виставити Н':
-        #grate_less(message,db_filename, user_grypa)
-        jurnal1_2_1interval(message, db_filename, user_grypa)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('Понеділок')
+        item2 = types.KeyboardButton('Вівторок')
+        item3 = types.KeyboardButton('Середа')
+        item4 = types.KeyboardButton('Четвер')
+        item5 = types.KeyboardButton('П\'ятниця')
+        item6 = types.KeyboardButton('Субота')
+        markup.add(types.KeyboardButton('🔙Назад'))
+        markup.add(item1, item2, item3)
+        markup.add(item4, item5, item6)
+        bot.send_message(message.chat.id, "Оберіть день в якому хочете виставити Н",reply_markup=markup)
+        bot.register_next_step_handler(message, grate_less, db_filename, user_grypa)
+
     elif text == 'Закрити Л. тиждень':
         close_less(message,db_filename, user_grypa)
+
+
+
+
+def grate_less(message,db_filename, user_grypa):
+    day = message.text
+    if day == '🔙Назад':
+        jurnal1_1(message)
+    elif day in ['Понеділок','Вівторок','Середа','Четвер','П\'ятниця','Субота']:
+        day = day.replace("\'", "")
+        table_name = f"лекційний_{day}"
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns if column[1] != 'Студенти']
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        markup.add(types.KeyboardButton('🔙Назад'))
+        for column_name in column_names:
+            markup.add(column_name)
+        bot.send_message(message.chat.id, "Оберіть предмет в якому хочете виставити Н", reply_markup=markup)
+        conn.close()
+        bot.register_next_step_handler(message, grate_less_2, db_filename, user_grypa, column_names,table_name)
+    else:
+        bot.send_message(message.chat.id, "Такого варіанту немає\nОберіть предмет в якому хочете виставити Н")
+        bot.register_next_step_handler(message, grate_less, db_filename, user_grypa)
+
+
+def grate_less_2(message,db_filename, user_grypa, column_names,table_name):
+    pred = message.text
+    if pred in column_names:
+        bot.send_message(message.chat.id,
+                         "Оцінки не ставте а ставте тільки Н якщо студент був присутній то пропуск")
+        bot.send_message(message.chat.id,
+                         "ПІБ(Одногрупника) - Н\nПІБ(Одногрупника) - \nПІБ(Одногрупника) - Н")
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+
+        # Витягуємо всі значення зі стовпця "Студенти" таблиці "STUDENTY"
+        cursor.execute("SELECT Студенти FROM STUDENTY")
+        students = cursor.fetchall()
+
+        # Формуємо повідомлення зі списком студентів
+        students_list = "\n".join([student[0] + ' - ' for student in students])
+
+        # Надсилаємо повідомлення зі списком студентів у бота
+        bot.send_message(message.chat.id, f"<code>{students_list}</code>", parse_mode=ParseMode.HTML)
+        conn.close()
+        bot.register_next_step_handler(message, grate_less_3, db_filename, user_grypa, pred,table_name)
+    else:
+        bot.send_message(message.chat.id,
+                         "Такого варіанту немає")
+        bot.register_next_step_handler(message, grate_less_2, db_filename, user_grypa, column_names,table_name)
+
+def grate_less_3(message,db_filename, user_grypa, pred,table_name):
+    text = message.text
+    conn = sqlite3.connect(db_filename)
+    cursor = conn.cursor()
+    text = text.split("\n")
+    split = []
+
+
+    for i in text:
+        student_data = i.split(" - ")
+        if len(student_data) == 2:
+            split.append(student_data)
+    spec = "_<>,.?!@#$%^&*()+=`\"\'"
+    for i in split:
+        for k,w in enumerate(i):
+            if w in spec or w == "" or w == " ":
+                i[k] = None
+
+    splitnot =[]
+    split2 = []
+    for i in split:
+        for k,w in enumerate(i):
+            if w.isdigit():
+                splitnot.append(i[k])
+
+            else:
+                split2.append(i[k])
+
+    if len(splitnot) > 0:
+        list = tuple(splitnot)
+        message_text = "\n\n".join(list)
+        bot.send_message(message.chat.id,f"{message_text} Ось ці рядки я не зміг розпізнати, будь ласка надішліть ще раз і правильно за таким зразком\n\nПІБ - Н\nПІБ - ")
+        bot.register_next_step_handler(message, grate_less_3, db_filename, user_grypa)
+    else:
+        for row in split:
+            student_data = row.split(" - ")
+            name, grade = student_data
+            cursor.execute(f"UPDATE {table_name} SET [{pred}] = ? WHERE Студенти = ?",(grade, name))
+            conn.commit()
+            conn.close()
+
+
+
+
 def edit_less(message,db_filename, user_grypa):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton('Понеділок')
@@ -1806,17 +2100,11 @@ def edit_less_2(message,db_filename, user_grypa):
     columns_names = [item[1] for item in columns]
     columns_names.remove(columns_names[0])
     formatted_strings = []
-    instructor_list = ['Викладач1', 'Викладач2', 'Викладач3', 'Викладач4']
     for i, subject in enumerate(columns_names):
-        if i < len(instructor_list):
-            instructor = instructor_list[i]
-        else:
-            instructor = ""
-        formatted_strings.append(f"{i + 1}) {subject} - {instructor}")
-
+        formatted_strings.append(f"{i + 1}) {subject}")
     formatted_output = "\n".join(formatted_strings)
     bot.send_message(message.chat.id, f"Ось розклад на {text1}\n{formatted_output}",reply_markup=telebot.types.ReplyKeyboardRemove())
-    time.sleep(0.5)
+    time.sleep(1)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton('Редагувати')
     item2 = types.KeyboardButton('🔙Назад')
@@ -1838,17 +2126,16 @@ def edit_less_3(message,db_filename, user_grypa,text):
     else:
         bot.send_message(message.chat.id, f"Такого варіанту немає")
         bot.register_next_step_handler(message, edit_less_3, db_filename, user_grypa, text)
-
+def remove_numbering(text_list):
+    return [line.split(". ")[1] if ". " in line else line for line in text_list]
 def edit_less_4(message,db_filename, user_grypa, day):
     text = message.text
     text = text.split("\n")
-    if len(text)<4:
-        bot.send_message(message.chat.id, f"Ви ввели замало предметів має бути 4 будь ласка введіть ще раз",reply_markup=telebot.types.ReplyKeyboardRemove())
-        bot.register_next_step_handler(message, edit_less_4, db_filename, user_grypa)
-    elif len(text) < 4:
-        bot.send_message(message.chat.id, f"Ви ввели забагато предметів має бути 4 будь ласка введіть ще раз",
+    text = remove_numbering(text)
+    if len(text) != 4:
+        bot.send_message(message.chat.id, f"Має бути введено рівно 4 предмети. Введіть ще раз.",
                          reply_markup=telebot.types.ReplyKeyboardRemove())
-        bot.register_next_step_handler(message, edit_less_4, db_filename, user_grypa)
+        bot.register_next_step_handler(message, edit_less_4, db_filename, user_grypa, day)
     else:
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
@@ -1856,8 +2143,14 @@ def edit_less_4(message,db_filename, user_grypa, day):
         columns = cursor.fetchall()
         columns_names = [item[1] for item in columns]
         columns_names.remove(columns_names[0])
-        print(columns_names)
-        print(text)
+        t=0
+        for i in columns_names:
+            cursor.execute(f"ALTER TABLE лекційний_{day} RENAME COLUMN [{i}] TO [{text[t]}]")
+            t+=1
+
+        # Відправлення підтвердження
+        bot.send_message(message.chat.id, "Розклад на день оновлено.", reply_markup=telebot.types.ReplyKeyboardRemove())
+        jurnal1_2_1interval(message, db_filename, user_grypa)
 
 
 def close_less(message,db_filename, user_grypa):
@@ -1868,9 +2161,6 @@ def close_less(message,db_filename, user_grypa):
     markup.add(item2)
     bot.send_message(message.chat.id,"Ви точно хочете закрити лекційний тиждень?",reply_markup=markup)
     bot.register_next_step_handler(message, close_less_2, db_filename, user_grypa)
-
-
-
 def close_less_2(message,db_filename, user_grypa):
     text = message.text
     if text == 'Так👌':
@@ -2484,9 +2774,19 @@ def jurnal_1_dodavanna_temy(message, db_filename, subject, table):
     new_tema = message.text
     kay = ["модуль 1", 'модуль 2', 'Модуль 1', 'Модуль 2', "залік", "Залік", 'Екзамен', 'екзамен',
            'Підсумковий контроль', 'підсумковий контроль','студенти','Студенти']
-    if new_tema in kay:
+    conn = sqlite3.connect(db_filename)
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({subject}_{table})")
+    columns = cursor.fetchall()
+    columns_names = [item[1] for item in columns]
+    if new_tema in columns_names:
+        bot.send_message(message.chat.id, f'Така тема вже існує ви не можете додати її: {new_tema}\nНадішліть мені іншу назву теми')
+        bot.register_next_step_handler(message, jurnal_1_dodavanna_temy, db_filename, subject, table)
+    elif new_tema in kay:
         bot.send_message(message.chat.id, f'Таку тему додати неможливо: {new_tema}\nНадішліть мені іншу назву теми')
         bot.register_next_step_handler(message, jurnal_1_dodavanna_temy, db_filename, subject, table)
+
+
     else:
         # Підключення до бази даних
         conn = sqlite3.connect(db_filename)
@@ -2629,15 +2929,16 @@ def jurnal_1_dodavanna_temy_5(message, db_filename, subject, table,new_tema):
             bot.register_next_step_handler(message, menu_vikladacham_2)
 def jurnal1_tema_1(message, db_filename, user_grypa, subject, table, column_names):
     tema = message.text
+
     if tema == '🔙Назад':
         message_handler_start(message)
     elif tema.startswith('/'):
-        bot.send_message(message.chat.id, f"ви надіслали команду а не тему яку хочете редагувати оберіть будь ласка ще раз тему")
+        bot.send_message(message.chat.id, f"ви надіслали команду, а не назву теми, яку хочете редагувати оберіть будь ласка ще раз тему")
         bot.register_next_step_handler(message, jurnal1_tema_1, db_filename, user_grypa, subject, table, column_names)
 
     else:
         if tema in column_names:
-            bot.send_message(message.chat.id,f"Введіть нову назву теми, яку ви вибрали {tema}")
+            bot.send_message(message.chat.id,f"Введіть нову назву теми, яку ви вибрали {tema}",reply_markup=telebot.types.ReplyKeyboardRemove())
             bot.register_next_step_handler(message, jurnal1_tema_2 , db_filename, user_grypa, subject, table,column_names,tema)
         else:
             # Тут робіть необхідні дії, якщо tema не входить у column_names
@@ -2647,11 +2948,19 @@ def jurnal1_tema_2(message, db_filename, user_grypa, subject, table,column_names
     tema_new = message.text
     kay = ["модуль 1", 'модуль 2', 'Модуль 1', 'Модуль 2', "залік", "Залік", 'Екзамен', 'екзамен',
            'Підсумковий контроль', 'підсумковий контроль','студенти','Студенти']
-
+    conn = sqlite3.connect(db_filename)
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({subject}_{table})")
+    columns = cursor.fetchall()
+    names = [item[1] for item in columns]
 
 
     if tema_new == '🔙Назад':
         message_handler_start(message)
+
+    elif tema_new in names:
+        bot.send_message(message.chat.id, f'Така тема вже існує ви не можете додати 2 одинакових теми‼️: {tema_new}\nНадішліть мені іншу назву теми')
+        bot.register_next_step_handler(message, jurnal1_tema_2, db_filename,user_grypa, subject, table,column_names,tema)
     elif tema_new in kay:
         bot.send_message(message.chat.id, f'Таку тему відредагувати неможливо: {tema_new}\nНадішліть мені іншу назву теми')
         bot.register_next_step_handler(message, jurnal1_tema_2, db_filename, user_grypa, subject, table,column_names,tema)
@@ -3003,7 +3312,7 @@ def jurnal2_1(message, user_grypa):
     cursor.execute("CREATE TABLE лекційний_Пятниця (Студенти TEXT,Назвапредмету1 TEXT,Назвапредмету2 TEXT,Назвапредмету3 TEXT,Назвапредмету4 TEXT)")
     cursor.execute("CREATE TABLE лекційний_Субота (Студенти TEXT,Назвапредмету1 TEXT,Назвапредмету2 TEXT,Назвапредмету3 TEXT,Назвапредмету4 TEXT)")
     cursor.execute("CREATE TABLE Лекційний_Тиждень (Лекційний_Тиждень TEXT)")
-    cursor.execute(f'INSERT INTO Лекційний_Тиждень VALUES NULL')
+    cursor.execute(f'INSERT INTO Лекційний_Тиждень VALUES (NULL)')
     # Збереження змін до бази даних
     conn.commit()
 
